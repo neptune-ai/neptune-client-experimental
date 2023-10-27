@@ -28,6 +28,11 @@ runs:
         with:
           python-version: ${{ inputs.python-version }}
 
+      - name: Install core neptune package
+        run: |
+          pip install git+https://github.com/neptune-ai/neptune-client.git@rj/experimental#egg=neptune-client
+        shell: bash
+
       - name: Install dependencies
         run: |
           pip install -r dev_requirements.txt
