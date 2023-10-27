@@ -52,6 +52,9 @@ packages = [
     { include = "neptune_experimental", from = "src" },
 ]
 
+[tool.poetry.plugins."neptune.extensions"]
+"experimental" = "neptune_experimental:initialize"
+
 [tool.poetry.urls]
 "Tracker" = "https://github.com/neptune-ai/neptune-client-experimental/issues"
 "Documentation" = "https://docs.neptune.ai/"
@@ -80,5 +83,15 @@ force_grid_wrap = 2
 max-line-length = 120
 extend-ignore = "E203"
 
-[tool.poetry.plugins."neptune.extensions"]
-"experimental" = "neptune_experimental:initialize"
+[tool.mypy]
+files = 'src/neptune_experimental'
+mypy_path = "stubs"
+install_types = "True"
+non_interactive = "True"
+disallow_untyped_defs = "True"
+no_implicit_optional = "True"
+check_untyped_defs = "True"
+warn_return_any = "True"
+show_error_codes = "True"
+warn_unused_ignores = "True"
+ignore_missing_imports = "True"

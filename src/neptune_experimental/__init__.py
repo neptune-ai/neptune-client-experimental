@@ -18,6 +18,6 @@ import neptune
 from neptune_experimental.run import CustomRun
 
 
-def initialize():
+def initialize() -> None:
     # Monkey patching
     neptune.Run = CustomRun
