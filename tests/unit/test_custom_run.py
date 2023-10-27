@@ -13,21 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-__all__ = ["CustomRun"]
+from neptune import Run
 
-from typing import Any
-
-import neptune
+from neptune_experimental.run import CustomRun
 
 
-# That's just a boilerplate code to make sure that the extension is loaded
-class CustomRun(neptune.Run):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        print("That's custom class")
-
-        kwargs["capture_hardware_metrics"] = False
-        kwargs["capture_stdout"] = False
-        kwargs["capture_stderr"] = False
-        kwargs["capture_traceback"] = False
-
-        super().__init__(*args, **kwargs)
+def test_custom_run():
+    with Run(mode="debug") as run:
+        assert isinstance(run, CustomRun)
