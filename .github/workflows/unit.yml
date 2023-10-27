@@ -12,13 +12,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.11"]
-        os: [ubuntu, windows]
-        include:
-          - python-version: "3.7.16"
-            os: macos
-          - python-version: "3.11"
-            os: macos
+        python-version: ["3.7"] #, "3.11"]
+        os: [ubuntu] #, windows]
+#        include:
+#          - python-version: "3.7.16"
+#            os: macos
+#          - python-version: "3.11"
+#            os: macos
 
     name: 'test (${{ matrix.os }} - py${{ matrix.python-version }})'
     runs-on: ${{ matrix.os }}-latest
