@@ -1,10 +1,7 @@
 name: unit
 
 on:
-  workflow_call:
-  workflow_dispatch:
-  schedule:
-    - cron: "0 4 * * *" # Run every day at arbitrary time (4:00 AM UTC)
+  pull_request:
   push:
     branches:
       - main
@@ -15,16 +12,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.7", "3.11"]
         os: [ubuntu, windows]
         include:
           - python-version: "3.7.16"
             os: macos
-          - python-version: "3.8"
-            os: macos
-          - python-version: "3.9"
-            os: macos
-          - python-version: "3.10"
+          - python-version: "3.11"
             os: macos
 
     name: 'test (${{ matrix.os }} - py${{ matrix.python-version }})'
