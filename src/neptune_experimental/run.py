@@ -18,16 +18,34 @@ __all__ = ["CustomRun"]
 from typing import Any
 
 import neptune
+from neptune.internal.backgroud_job_list import BackgroundJobList
+from neptune.internal.utils import verify_type
+from neptune.internal.websockets.websocket_signals_background_job import WebsocketSignalsBackgroundJob
 
 
-# That's just a boilerplate code to make sure that the extension is loaded
 class CustomRun(neptune.Run):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        print("That's custom class")
+        enable_remote_signals = kwargs.pop("enable_remote_signals", None)
 
-        kwargs["capture_hardware_metrics"] = False
-        kwargs["capture_stdout"] = False
-        kwargs["capture_stderr"] = False
-        kwargs["capture_traceback"] = False
+        if enable_remote_signals is None:
+            self._enable_remote_signals = True  # user did not pass this param in kwargs -> default value
+        else:
+
+            verify_type("enable_remote_signals", enable_remote_signals, bool)
+            self._enable_remote_signals = enable_remote_signals
 
         super().__init__(*args, **kwargs)
+
+    def _prepare_background_jobs(self) -> BackgroundJobList:
+        background_jobs = super()._prepare_background_jobs()
+
+        if not self._enable_remote_signals:
+            # filter-out websocket job
+            background_jobs._jobs = list(
+                filter(
+                    lambda x: not isinstance(x, WebsocketSignalsBackgroundJob),
+                    background_jobs._jobs,
+                )
+            )
+
+        return background_jobs

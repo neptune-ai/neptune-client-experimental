@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 from neptune import Run
+from neptune.internal.websockets.websocket_signals_background_job import WebsocketSignalsBackgroundJob
 
 from neptune_experimental.run import CustomRun
 
@@ -21,3 +23,10 @@ from neptune_experimental.run import CustomRun
 def test_custom_run():
     with Run(mode="debug") as run:
         assert isinstance(run, CustomRun)
+
+
+def test_disabled_remote_signals():
+    with Run(mode="debug", enable_remote_signals=False) as run:
+        assert run._enable_remote_signals is False
+        jobs = run._prepare_background_jobs()._jobs
+        assert not [job for job in jobs if isinstance(job, WebsocketSignalsBackgroundJob)]
