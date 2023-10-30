@@ -30,7 +30,7 @@ runs:
 
       - name: Install core neptune package
         run: |
-          pip install git+https://github.com/neptune-ai/neptune-client.git@rj/experimental#egg=neptune
+          pip install git+https://github.com/neptune-ai/neptune-client.git@master#egg=neptune
         shell: bash
 
       - name: Install dependencies
