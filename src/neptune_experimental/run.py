@@ -13,10 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+__all__ = ["CustomRun"]
+
+from typing import Any
+
 import neptune
 
+
+# That's just a boilerplate code to make sure that the extension is loaded
 class CustomRun(neptune.Run):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         print("That's custom class")
 
         kwargs["capture_hardware_metrics"] = False
