@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from unittest.mock import patch
+
 from neptune import Run
 
 from neptune_experimental.run import CustomRun
@@ -21,3 +23,11 @@ from neptune_experimental.run import CustomRun
 def test_custom_run():
     with Run(mode="debug") as run:
         assert isinstance(run, CustomRun)
+
+
+@patch("neptune.internal.backends.neptune_backend_mock.NeptuneBackendMock.websockets_factory")
+@patch("neptune.internal.websockets.websocket_signals_background_job.WebsocketSignalsBackgroundJob")
+def test_disabled_remote_signals(ws_factory, signals_job):
+    with Run(mode="debug", enable_remote_signals=False):
+        assert not ws_factory.called
+        assert not signals_job.called
