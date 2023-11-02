@@ -17,7 +17,7 @@ __all__ = ["initialize"]
 
 from typing import Any
 
-import neptune
+from neptune import Run
 from neptune.internal.backgroud_job_list import BackgroundJobList
 from neptune.internal.utils import verify_type
 from neptune.internal.websockets.websocket_signals_background_job import WebsocketSignalsBackgroundJob
@@ -27,12 +27,11 @@ from neptune_experimental.utils import override
 
 def initialize() -> None:
     # Monkey patching
-    neptune.Run.__init__ = override(target=neptune.Run.__init__)(init_with_enable_remote_signals)
-    neptune.Run._prepare_background_jobs = override(target=neptune.Run._prepare_background_jobs)(prepare_background_jobs)
+    override(obj=Run, method="__init__", target=init_with_enable_remote_signals)
+    override(obj=Run, method="_prepare_background_jobs", target=prepare_background_jobs)
 
 
 def init_with_enable_remote_signals(self, *args: Any, original, **kwargs: Any) -> None:
-    print('Hello from "remote_signals" feature!')
     enable_remote_signals = kwargs.pop("enable_remote_signals", None)
 
     if enable_remote_signals is None:

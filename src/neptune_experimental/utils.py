@@ -18,14 +18,12 @@ __all__ = ["override"]
 from functools import wraps
 
 
-def override(target):
-    print("override called")
+def override(*, obj, method, target):
+    old_method = getattr(obj, method)
 
-    def simple_decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            func(*args, original=target, **kwargs)
+    @wraps(old_method)
+    def wrapper(*args, **kwargs):
+        return target(*args, original=old_method, **kwargs)
 
-        return wrapper
+    setattr(obj, method, wrapper)
 
-    return simple_decorator

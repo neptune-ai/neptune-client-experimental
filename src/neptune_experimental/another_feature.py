@@ -15,14 +15,14 @@
 #
 __all__ = ["initialize"]
 
-import neptune
+from neptune import Run
 
 from neptune_experimental.utils import override
 
 
 def initialize() -> None:
     # Monkey patching
-    neptune.Run.__init__ = override(target=neptune.Run.__init__)(init_with_print)
+    override(obj=Run, method="__init__", target=init_with_print)
 
 
 def init_with_print(self, *args, original, **kwargs) -> None:
