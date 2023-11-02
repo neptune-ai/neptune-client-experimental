@@ -13,7 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""
+This is just a boilerplate code to show how to use the override function.
+"""
 __all__ = ["initialize"]
+
+
+from typing import (
+    Any,
+    Callable,
+)
 
 from neptune import Run
 
@@ -25,6 +34,6 @@ def initialize() -> None:
     override(obj=Run, method="__init__", target=init_with_print)
 
 
-def init_with_print(self, *args, original, **kwargs) -> None:
+def init_with_print(self: "Run", *args: Any, original: Callable[..., Any], **kwargs: Any) -> None:
     print("That's another feature")
     original(self, *args, **kwargs)

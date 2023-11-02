@@ -15,7 +15,10 @@
 #
 __all__ = ["initialize"]
 
-from typing import Any
+from typing import (
+    Any,
+    Callable,
+)
 
 from neptune import Run
 from neptune.internal.backgroud_job_list import BackgroundJobList
@@ -31,7 +34,7 @@ def initialize() -> None:
     override(obj=Run, method="_prepare_background_jobs", target=prepare_background_jobs)
 
 
-def init_with_enable_remote_signals(self, *args: Any, original, **kwargs: Any) -> None:
+def init_with_enable_remote_signals(self: "Run", *args: Any, original: Callable[..., Any], **kwargs: Any) -> None:
     enable_remote_signals = kwargs.pop("enable_remote_signals", None)
 
     if enable_remote_signals is None:
@@ -44,7 +47,7 @@ def init_with_enable_remote_signals(self, *args: Any, original, **kwargs: Any) -
     original(self, *args, **kwargs)
 
 
-def prepare_background_jobs(self, original) -> BackgroundJobList:
+def prepare_background_jobs(self: "Run", original: Callable[..., Any]) -> BackgroundJobList:
     background_jobs = original(self)
 
     if not self._enable_remote_signals:

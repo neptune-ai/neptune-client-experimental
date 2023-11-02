@@ -16,14 +16,17 @@
 __all__ = ["override"]
 
 from functools import wraps
+from typing import (
+    Any,
+    Callable,
+)
 
 
-def override(*, obj, method, target):
-    old_method = getattr(obj, method)
+def override(*, obj: Any, method: str, target: Callable[..., Any]) -> None:
+    source = getattr(obj, method)
 
-    @wraps(old_method)
-    def wrapper(*args, **kwargs):
-        return target(*args, original=old_method, **kwargs)
+    @wraps(source)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return target(*args, original=source, **kwargs)
 
     setattr(obj, method, wrapper)
-
