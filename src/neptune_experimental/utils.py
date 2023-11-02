@@ -13,3 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+__all__ = ["override"]
+
+from functools import wraps
+
+
+def override(target):
+    print("override called")
+
+    def simple_decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            func(*args, original=target, **kwargs)
+
+        return wrapper
+
+    return simple_decorator
