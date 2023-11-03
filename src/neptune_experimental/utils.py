@@ -13,3 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+__all__ = ["override"]
+
+from functools import wraps
+from typing import (
+    Any,
+    Callable,
+)
+
+
+def override(*, obj: Any, method: str, target: Callable[..., Any]) -> None:
+    source = getattr(obj, method)
+
+    @wraps(source)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return target(*args, original=source, **kwargs)
+
+    setattr(obj, method, wrapper)

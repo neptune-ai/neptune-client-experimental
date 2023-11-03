@@ -13,11 +13,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import neptune
-
-from neptune_experimental.run import CustomRun
-
-
-def initialize() -> None:
-    # Monkey patching
-    neptune.Run = CustomRun
