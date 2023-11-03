@@ -30,8 +30,8 @@ from neptune_experimental.utils import override
 
 def initialize() -> None:
     # Monkey patching
-    override(obj=Run, method="__init__", target=init_with_enable_remote_signals)
-    override(obj=Run, method="_prepare_background_jobs", target=prepare_background_jobs)
+    override(obj=Run, attr="__init__", target=init_with_enable_remote_signals)
+    override(obj=Run, attr="_prepare_background_jobs", target=prepare_background_jobs)
 
 
 def init_with_enable_remote_signals(self: "Run", *args: Any, original: Callable[..., Any], **kwargs: Any) -> None:

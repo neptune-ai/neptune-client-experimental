@@ -31,7 +31,7 @@ from neptune_experimental.utils import override
 
 def initialize() -> None:
     # Monkey patching
-    override(obj=Run, method="__init__", target=init_with_print)
+    override(obj=Run, attr="__init__", target=init_with_print)
 
 
 def init_with_print(self: "Run", *args: Any, original: Callable[..., Any], **kwargs: Any) -> None:
