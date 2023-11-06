@@ -12,28 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-"""
-This is just a boilerplate code to show how to use the override function.
-"""
-__all__ = ["initialize"]
 
+__all__ = [
+    "NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS",
+]
 
-from typing import (
-    Any,
-    Callable,
-)
-
-from neptune import Run
-
-from neptune_experimental.utils import override
-
-
-def initialize() -> None:
-    # Monkey patching
-    override(obj=Run, attr="__init__", target=init_with_print)
-
-
-def init_with_print(self: "Run", *args: Any, original: Callable[..., Any], **kwargs: Any) -> None:
-    print("That's another feature")
-    original(self, *args, **kwargs)
+NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS = "NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS"

@@ -18,6 +18,7 @@ __all__ = ["initialize"]
 import os
 import re
 from typing import (
+    Any,
     List,
     Set,
 )
@@ -27,9 +28,8 @@ from neptune.exceptions import MetadataInconsistency
 from neptune.internal.operation_processors.async_operation_processor import AsyncOperationProcessor
 from neptune.internal.utils.logger import logger
 
+from neptune_experimental.env import NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS
 from neptune_experimental.utils import override
-
-NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS = "NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS"
 
 
 def initialize() -> None:
@@ -64,8 +64,8 @@ class OperationErrorProcessor:
 
 
 class CustomConsumerThread(AsyncOperationProcessor.ConsumerThread):
-    def __init__(self, processor: "AsyncOperationProcessor", sleep_time: float, batch_size: int):
-        super().__init__(processor, sleep_time, batch_size)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
         self._errors_processor: OperationErrorProcessor = OperationErrorProcessor()
 
     def _handle_errors(self, errors: List[NeptuneException]) -> None:
