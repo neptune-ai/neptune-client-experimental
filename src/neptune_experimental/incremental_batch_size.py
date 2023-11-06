@@ -13,27 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import os
-from typing import (
-    Any,
-    Optional,
-)
-
-from neptune.internal.operation_processors import (
-    async_operation_processor,
-    factory,
-)
-from neptune.internal.operation_processors.async_operation_processor import AsyncOperationProcessor
-from neptune.internal.operation_processors.operation_processor import OperationProcessor
-from neptune.internal.operation_processors.partitioned_operation_processor import PartitionedOperationProcessor
-
-from neptune_experimental.env import NEPTUNE_ASYNC_BATCH_SIZE
-from neptune_experimental.utils import override
-
-
-def initialize() -> None:
-    override(obj=async_operation_processor, attr="AsyncOperationProcessor", target=CustomAsyncOperationProcessor)
-    override(obj=factory, attr="get_operation_processor", target=custom_get_operation_processor)
 
 
 class MonotonicIncBatchSize:
@@ -51,32 +30,3 @@ class MonotonicIncBatchSize:
 
     def get(self) -> int:
         return self._current_size
-
-
-class CustomAsyncOperationProcessor(AsyncOperationProcessor):
-    class ConsumerThread(AsyncOperationProcessor.ConsumerThread):
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            super().__init__(*args, **kwargs)
-            self._m_batch_size: Optional[MonotonicIncBatchSize] = None
-
-        def _increment(self) -> None:
-            if hasattr(self, "_m_batch_size") and self._m_batch_size is not None:
-                self._m_batch_size.increase()
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self._m_batch_size: MonotonicIncBatchSize = MonotonicIncBatchSize(size_limit=self._batch_size)
-        self._consumer._m_batch_size = self._m_batch_size
-
-    def _check_queue_size(self) -> bool:
-        return bool(self._queue.size() > self._m_batch_size.get() / 2)
-
-
-def custom_get_operation_processor(*args: Any, **kwargs: Any) -> OperationProcessor:
-    processor = factory.get_operation_processor(*args, **kwargs)
-
-    if isinstance(processor, PartitionedOperationProcessor) or isinstance(processor, AsyncOperationProcessor):
-        batch_size = int(os.environ.get(NEPTUNE_ASYNC_BATCH_SIZE) or "1000")
-        processor.batch_size = batch_size
-
-    return processor

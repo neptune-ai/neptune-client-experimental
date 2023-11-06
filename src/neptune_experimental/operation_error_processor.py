@@ -13,27 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-__all__ = ["initialize"]
+__all__ = ["OperationErrorProcessor"]
 
 import os
 import re
 from typing import (
-    Any,
     List,
     Set,
 )
 
 from neptune.common.exceptions import NeptuneException
 from neptune.exceptions import MetadataInconsistency
-from neptune.internal.operation_processors.async_operation_processor import AsyncOperationProcessor
 from neptune.internal.utils.logger import logger
 
 from neptune_experimental.env import NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS
-from neptune_experimental.utils import override
-
-
-def initialize() -> None:
-    override(obj=AsyncOperationProcessor, attr="ConsumerThread", target=CustomConsumerThread)
 
 
 class OperationErrorProcessor:
@@ -61,12 +54,3 @@ class OperationErrorProcessor:
                 f"Error occurred during asynchronous operation processing: {str(error)}. "
                 + f"Suppressing other errors for step: {step}."
             )
-
-
-class CustomConsumerThread(AsyncOperationProcessor.ConsumerThread):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self._errors_processor: OperationErrorProcessor = OperationErrorProcessor()
-
-    def _handle_errors(self, errors: List[NeptuneException]) -> None:
-        self._errors_processor.handle(errors)
