@@ -22,11 +22,11 @@ from typing import (
 )
 
 
-def override(*, obj: Any, method: str, target: Callable[..., Any]) -> None:
-    source = getattr(obj, method)
+def override(*, obj: Any, attr: str, target: Callable[..., Any]) -> None:
+    source = getattr(obj, attr)
 
     @wraps(source)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         return target(*args, original=source, **kwargs)
 
-    setattr(obj, method, wrapper)
+    setattr(obj, attr, wrapper)
