@@ -40,19 +40,19 @@ class TestMonotonicIncBatchSize(unittest.TestCase):
         assert batch_size.get() == 10
 
     def test_invalid_limit_size(self):
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             MonotonicIncBatchSize(size_limit=-1, initial_size=1, scale_coef=1.1)
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             MonotonicIncBatchSize(size_limit=0, initial_size=1, scale_coef=1.1)
 
     def test_invalid_scale_coef(self):
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             MonotonicIncBatchSize(size_limit=2, initial_size=1, scale_coef=1)
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             MonotonicIncBatchSize(size_limit=2, initial_size=1, scale_coef=-1)
 
     def test_invalid_initial_size(self):
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             MonotonicIncBatchSize(size_limit=2, initial_size=0, scale_coef=1.1)
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             MonotonicIncBatchSize(size_limit=2, initial_size=3, scale_coef=1.1)
