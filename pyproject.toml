@@ -54,7 +54,7 @@ packages = [
 
 [tool.poetry.plugins."neptune.extensions"]
 "experimental_remote_signals" = "neptune_experimental.remote_signals:initialize"
-"experimental_another_feature" = "neptune_experimental.another_feature:initialize"
+"experimental_safe_mode" = "neptune_experimental.safe_mode:initialize"
 
 [tool.poetry.urls]
 "Tracker" = "https://github.com/neptune-ai/neptune-client-experimental/issues"

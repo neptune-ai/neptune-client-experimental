@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-__all__ = ["override"]
+__all__ = ["wrap_method", "override_method"]
 
 from functools import wraps
 from typing import (
@@ -22,11 +22,26 @@ from typing import (
 )
 
 
-def override(*, obj: Any, method: str, target: Callable[..., Any]) -> None:
+def wrap_method(
+        *,
+        obj: Any,
+        method: str,
+        wrapper: Callable[..., Any]) -> None:
     source = getattr(obj, method)
 
     @wraps(source)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        return target(*args, original=source, **kwargs)
+    def new_method(*args: Any, **kwargs: Any) -> Any:
+        return wrapper(*args, original=source, **kwargs)
 
-    setattr(obj, method, wrapper)
+    setattr(obj, method, new_method)
+
+
+def override_method(
+        *,
+        obj: Any,
+        method: str,
+        method_factory: Callable[[Callable[..., Any]], Callable[..., Any]]) -> None:
+    source = getattr(obj, method)
+    new_method = method_factory(source)
+
+    setattr(obj, method, new_method)

@@ -25,13 +25,13 @@ from neptune.internal.backgroud_job_list import BackgroundJobList
 from neptune.internal.utils import verify_type
 from neptune.internal.websockets.websocket_signals_background_job import WebsocketSignalsBackgroundJob
 
-from neptune_experimental.utils import override
+from neptune_experimental.utils import wrap_method
 
 
 def initialize() -> None:
     # Monkey patching
-    override(obj=Run, method="__init__", target=init_with_enable_remote_signals)
-    override(obj=Run, method="_prepare_background_jobs", target=prepare_background_jobs)
+    wrap_method(obj=Run, method="__init__", wrapper=init_with_enable_remote_signals)
+    wrap_method(obj=Run, method="_prepare_background_jobs", wrapper=prepare_background_jobs)
 
 
 def init_with_enable_remote_signals(self: "Run", *args: Any, original: Callable[..., Any], **kwargs: Any) -> None:
