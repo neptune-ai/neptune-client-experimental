@@ -14,12 +14,19 @@
 # limitations under the License.
 #
 
+__all__ = [
+    "MonotonicIncBatchSize",
+]
+
 
 class MonotonicIncBatchSize:
     def __init__(self, size_limit: int, initial_size: int = 10, scale_coef: float = 1.6):
-        assert size_limit > 0
-        assert scale_coef > 1
-        assert 0 < initial_size <= size_limit
+        if size_limit <= 0 or not isinstance(size_limit, int):
+            raise ValueError("Size limit must be a positive integer")
+        if scale_coef <= 1:
+            raise ValueError("Scale coefficient cannot be smaller than 1")
+        if initial_size <= 0 or initial_size > size_limit or not isinstance(initial_size, int):
+            raise ValueError(f"Initial size must be an integer in the interval (0, {size_limit}>")
 
         self._size_limit: int = size_limit
         self._current_size: int = initial_size
