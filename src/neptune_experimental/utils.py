@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-__all__ = ["wrap_method", "override_method", "override_attr"]
+__all__ = ["wrap_method", "override_method"]
 
 from functools import wraps
 from typing import (
@@ -38,9 +38,4 @@ def override_method(
 ) -> None:
     source = getattr(obj, method)
     new_method = method_factory(source)
-
-    override_attr(obj=obj, attr=method, new_attr=new_method)
-
-
-def override_attr(*, obj: Any, attr: str, new_attr: Any) -> None:
-    setattr(obj, attr, new_attr)
+    setattr(obj, method, new_method)
