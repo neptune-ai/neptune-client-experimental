@@ -145,7 +145,7 @@ class TestSafeMode(unittest.TestCase):
                     getattr(Handler(None, None), method)()
 
     @property
-    def run_methods(self) -> list[str]:
+    def run_methods(self):
         return [
             "__getitem__",
             "__setitem__",
@@ -170,7 +170,7 @@ class TestSafeMode(unittest.TestCase):
         ]
 
     @property
-    def project_methods(self) -> list[str]:
+    def project_methods(self):
         return [
             "__getitem__",
             "__setitem__",
@@ -196,7 +196,7 @@ class TestSafeMode(unittest.TestCase):
         ]
 
     @property
-    def model_methods(self) -> list[str]:
+    def model_methods(self):
         return [
             "__getitem__",
             "__setitem__",
@@ -221,7 +221,7 @@ class TestSafeMode(unittest.TestCase):
         ]
 
     @property
-    def model_version_methods(self) -> list[str]:
+    def model_version_methods(self):
         return [
             "__getitem__",
             "__setitem__",
@@ -244,7 +244,7 @@ class TestSafeMode(unittest.TestCase):
         ]
 
     @property
-    def handler_methods(self) -> list[str]:
+    def handler_methods(self):
         return [
             "__getitem__",
             "__setitem__",
