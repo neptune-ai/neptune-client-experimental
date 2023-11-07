@@ -1,4 +1,4 @@
-## [UNRELEASED] neptune-experimental 0.02
+## [UNRELEASED] neptune-experimental 0.0.2
 
 ### Fixes
 - Fixed patching with `OperationErrorProcessor` ([#12](https://github.com/neptune-ai/neptune-client-experimental/pull/12))
