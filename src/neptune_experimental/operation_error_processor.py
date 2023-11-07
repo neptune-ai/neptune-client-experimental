@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-__all__ = ["initialize"]
+__all__ = ["OperationErrorProcessor"]
 
 import os
 import re
 from typing import (
     Any,
+    Callable,
     List,
     Set,
 )
@@ -29,11 +30,12 @@ from neptune.internal.operation_processors.async_operation_processor import Asyn
 from neptune.internal.utils.logger import logger
 
 from neptune_experimental.env import NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS
-from neptune_experimental.utils import override_attr
+from neptune_experimental.utils import wrap_method
 
 
 def initialize() -> None:
-    override_attr(obj=AsyncOperationProcessor, attr="ConsumerThread", new_attr=CustomConsumerThread)
+    wrap_method(obj=AsyncOperationProcessor.ConsumerThread, method="__init__", wrapper=custom_init)
+    wrap_method(obj=AsyncOperationProcessor.ConsumerThread, method="_handle_errors", wrapper=custom_handle_errors)
 
 
 class OperationErrorProcessor:
@@ -63,10 +65,14 @@ class OperationErrorProcessor:
             )
 
 
-class CustomConsumerThread(AsyncOperationProcessor.ConsumerThread):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self._errors_processor: OperationErrorProcessor = OperationErrorProcessor()
+def custom_init(
+    self: "AsyncOperationProcessor.ConsumerThread", *args: Any, original: Callable[..., Any], **kwargs: Any
+) -> None:
+    original(self, *args, **kwargs)
+    self._errors_processor = OperationErrorProcessor()
 
-    def _handle_errors(self, errors: List[NeptuneException]) -> None:
-        self._errors_processor.handle(errors)
+
+def custom_handle_errors(
+    self: "AsyncOperationProcessor.ConsumerThread", errors: List[NeptuneException], *args: Any, **kwargs: Any
+) -> None:
+    self._errors_processor.handle(errors)
