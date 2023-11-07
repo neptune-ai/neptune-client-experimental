@@ -18,15 +18,24 @@ __all__ = ["OperationErrorProcessor"]
 import os
 import re
 from typing import (
+    Any,
+    Callable,
     List,
     Set,
 )
 
 from neptune.common.exceptions import NeptuneException
 from neptune.exceptions import MetadataInconsistency
+from neptune.internal.operation_processors.async_operation_processor import AsyncOperationProcessor
 from neptune.internal.utils.logger import logger
 
 from neptune_experimental.env import NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS
+from neptune_experimental.utils import wrap_method
+
+
+def initialize() -> None:
+    wrap_method(obj=AsyncOperationProcessor.ConsumerThread, method="__init__", wrapper=custom_init)
+    wrap_method(obj=AsyncOperationProcessor.ConsumerThread, method="_handle_errors", wrapper=custom_handle_errors)
 
 
 class OperationErrorProcessor:
@@ -54,3 +63,16 @@ class OperationErrorProcessor:
                 f"Error occurred during asynchronous operation processing: {str(error)}. "
                 + f"Suppressing other errors for step: {step}."
             )
+
+
+def custom_init(
+    self: "AsyncOperationProcessor.ConsumerThread", *args: Any, original: Callable[..., Any], **kwargs: Any
+) -> None:
+    original(self, *args, **kwargs)
+    self._errors_processor = OperationErrorProcessor()
+
+
+def custom_handle_errors(
+    self: "AsyncOperationProcessor.ConsumerThread", errors: List[NeptuneException], *args: Any, **kwargs: Any
+) -> None:
+    self._errors_processor.handle(errors)
