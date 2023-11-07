@@ -54,6 +54,7 @@ packages = [
 
 [tool.poetry.plugins."neptune.extensions"]
 "experimental_remote_signals" = "neptune_experimental.remote_signals:initialize"
+"experimental_operation_error_processor" = "neptune_experimental.operation_error_processor:initialize"
 "experimental_safe_mode" = "neptune_experimental.safe_mode:initialize"
 
 [tool.poetry.urls]

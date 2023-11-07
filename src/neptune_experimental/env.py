@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-__all__ = ["NEPTUNE_SAFETY_MODE"]
+__all__ = [
+    "NEPTUNE_SAFETY_MODE",
+    "NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS",
+]
 
 NEPTUNE_SAFETY_MODE = "NEPTUNE_SAFETY_MODE"
+NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS = "NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS"

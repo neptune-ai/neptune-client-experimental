@@ -5,7 +5,7 @@ from unittest.mock import patch
 from neptune import Run, Project, Model, ModelVersion
 from neptune.handler import Handler
 
-from neptune_experimental.experimental_envs import NEPTUNE_SAFETY_MODE
+from neptune_experimental.env import NEPTUNE_SAFETY_MODE
 from neptune_experimental.safe_mode import initialize
 
 
