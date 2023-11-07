@@ -3,6 +3,9 @@
 ### Features
 - Safety (errors suppressing) execution mode ([#8](https://github.com/neptune-ai/neptune-client-experimental/pull/8))
 
+### Fixes
+- Fixed patching with `OperationErrorProcessor` ([#12](https://github.com/neptune-ai/neptune-client-experimental/pull/12))
+
 
 ## neptune-experimental 0.0.2
 
