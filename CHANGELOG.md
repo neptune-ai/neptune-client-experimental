@@ -1,3 +1,9 @@
+## neptune-experimental 0.0.2
+
+### Changes
+- Split overriding into multiple methods ([#10](https://github.com/neptune-ai/neptune-client-experimental/pull/10))
+
+
 ## neptune-experimental 0.0.1
 
 ### Changes
