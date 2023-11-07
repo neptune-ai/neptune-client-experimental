@@ -50,6 +50,7 @@ keywords = [
 ]
 packages = [
     { include = "neptune_experimental", from = "src" },
+    { include = "neptune_fetcher", from = "src" },
 ]
 
 [tool.poetry.plugins."neptune.extensions"]
