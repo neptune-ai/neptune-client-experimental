@@ -29,11 +29,11 @@ from neptune.internal.operation_processors.async_operation_processor import Asyn
 from neptune.internal.utils.logger import logger
 
 from neptune_experimental.env import NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS
-from neptune_experimental.utils import wrap_method
+from neptune_experimental.utils import override_attr
 
 
 def initialize() -> None:
-    wrap_method(obj=AsyncOperationProcessor, method="ConsumerThread", wrapper=CustomConsumerThread)
+    override_attr(obj=AsyncOperationProcessor, attr="ConsumerThread", new_attr=CustomConsumerThread)
 
 
 class OperationErrorProcessor:
