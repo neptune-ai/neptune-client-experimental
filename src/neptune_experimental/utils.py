@@ -22,11 +22,7 @@ from typing import (
 )
 
 
-def wrap_method(
-        *,
-        obj: Any,
-        method: str,
-        wrapper: Callable[..., Any]) -> None:
+def wrap_method(*, obj: Any, method: str, wrapper: Callable[..., Any]) -> None:
     source = getattr(obj, method)
 
     @wraps(source)
@@ -36,11 +32,7 @@ def wrap_method(
     setattr(obj, method, new_method)
 
 
-def override(
-        *,
-        obj: Any,
-        attr: str,
-        method_factory: Callable[[Callable[..., Any]], Callable[..., Any]]) -> None:
+def override(*, obj: Any, attr: str, method_factory: Callable[[Callable[..., Any]], Callable[..., Any]]) -> None:
     source = getattr(obj, attr)
     new_method = method_factory(source)
 

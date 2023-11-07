@@ -19,16 +19,22 @@ import functools
 import os
 from typing import (
     Any,
+    Callable,
     Dict,
-    Tuple, Callable,
+    Tuple,
 )
 
-from neptune import Run, Project, ModelVersion, Model
+from neptune import (
+    Model,
+    ModelVersion,
+    Project,
+    Run,
+)
 from neptune.common.warnings import warn_once
 from neptune.handler import Handler
 
-from neptune_experimental.utils import override
 from neptune_experimental.env import NEPTUNE_SAFETY_MODE
+from neptune_experimental.utils import override
 
 
 def initialize() -> None:
@@ -40,10 +46,7 @@ def initialize() -> None:
 
 
 def override_model() -> None:
-    override(
-        obj=Model,
-        attr="__getitem__",
-        method_factory=safe_function(Handler(None, None)))
+    override(obj=Model, attr="__getitem__", method_factory=safe_function(Handler(None, None)))
     override(obj=Model, attr="__setitem__", method_factory=safe_function(None))
     override(obj=Model, attr="assign", method_factory=safe_function(None))
     override(obj=Model, attr="fetch", method_factory=safe_function({}))
@@ -66,10 +69,7 @@ def override_model() -> None:
 
 
 def override_model_version() -> None:
-    override(
-        obj=ModelVersion,
-        attr="__getitem__",
-        method_factory=safe_function(Handler(None, None)))
+    override(obj=ModelVersion, attr="__getitem__", method_factory=safe_function(Handler(None, None)))
     override(obj=ModelVersion, attr="__setitem__", method_factory=safe_function(None))
     override(obj=ModelVersion, attr="assign", method_factory=safe_function(None))
     override(obj=ModelVersion, attr="fetch", method_factory=safe_function({}))
