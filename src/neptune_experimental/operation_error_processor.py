@@ -18,22 +18,25 @@ __all__ = ["OperationErrorProcessor"]
 import os
 import re
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     List,
     Set,
 )
 
-from neptune.common.exceptions import NeptuneException
-from neptune.exceptions import MetadataInconsistency
-from neptune.internal.operation_processors.async_operation_processor import AsyncOperationProcessor
-from neptune.internal.utils.logger import logger
-
 from neptune_experimental.env import NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS
 from neptune_experimental.utils import wrap_method
 
+if TYPE_CHECKING:
+    from neptune.common.exceptions import NeptuneException
+    from neptune.exceptions import MetadataInconsistency
+    from neptune.internal.operation_processors.async_operation_processor import AsyncOperationProcessor
+
 
 def initialize() -> None:
+    from neptune.internal.operation_processors.async_operation_processor import AsyncOperationProcessor
+
     wrap_method(obj=AsyncOperationProcessor.ConsumerThread, method="__init__", wrapper=custom_init)
     wrap_method(obj=AsyncOperationProcessor.ConsumerThread, method="_handle_errors", wrapper=custom_handle_errors)
 
@@ -46,7 +49,10 @@ class OperationErrorProcessor:
         )
         self._logged_steps: Set[str] = set()
 
-    def handle(self, errors: List[NeptuneException]) -> None:
+    def handle(self, errors: List["NeptuneException"]) -> None:
+        from neptune.exceptions import MetadataInconsistency
+        from neptune.internal.utils.logger import logger
+
         for error in errors:
             if self._sampling_enabled and isinstance(error, MetadataInconsistency):
                 match_exp = self._error_sampling_exp.match(str(error))
@@ -56,7 +62,9 @@ class OperationErrorProcessor:
 
             logger.error("Error occurred during asynchronous operation processing: %s", str(error))
 
-    def _handle_not_increased_error_for_step(self, error: MetadataInconsistency, step: str) -> None:
+    def _handle_not_increased_error_for_step(self, error: "MetadataInconsistency", step: str) -> None:
+        from neptune.internal.utils.logger import logger
+
         if step not in self._logged_steps:
             self._logged_steps.add(step)
             logger.error(
@@ -73,6 +81,6 @@ def custom_init(
 
 
 def custom_handle_errors(
-    self: "AsyncOperationProcessor.ConsumerThread", errors: List[NeptuneException], *args: Any, **kwargs: Any
+    self: "AsyncOperationProcessor.ConsumerThread", errors: List["NeptuneException"], *args: Any, **kwargs: Any
 ) -> None:
     self._errors_processor.handle(errors)

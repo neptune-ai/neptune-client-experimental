@@ -16,25 +16,29 @@
 __all__ = ["initialize"]
 
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
 )
 
-from neptune import Run
-from neptune.internal.backgroud_job_list import BackgroundJobList
-from neptune.internal.utils import verify_type
-from neptune.internal.websockets.websocket_signals_background_job import WebsocketSignalsBackgroundJob
-
 from neptune_experimental.utils import wrap_method
+
+if TYPE_CHECKING:
+    from neptune import Run
+    from neptune.internal.backgroud_job_list import BackgroundJobList
 
 
 def initialize() -> None:
+    from neptune import Run
+
     # Monkey patching
     wrap_method(obj=Run, method="__init__", wrapper=init_with_enable_remote_signals)
     wrap_method(obj=Run, method="_prepare_background_jobs", wrapper=prepare_background_jobs)
 
 
 def init_with_enable_remote_signals(self: "Run", *args: Any, original: Callable[..., Any], **kwargs: Any) -> None:
+    from neptune.internal.utils import verify_type
+
     enable_remote_signals = kwargs.pop("enable_remote_signals", None)
 
     if enable_remote_signals is None:
@@ -47,7 +51,9 @@ def init_with_enable_remote_signals(self: "Run", *args: Any, original: Callable[
     original(self, *args, **kwargs)
 
 
-def prepare_background_jobs(self: "Run", original: Callable[..., Any]) -> BackgroundJobList:
+def prepare_background_jobs(self: "Run", original: Callable[..., Any]) -> "BackgroundJobList":
+    from neptune.internal.websockets.websocket_signals_background_job import WebsocketSignalsBackgroundJob
+
     background_jobs = original(self)
 
     if not self._enable_remote_signals:
