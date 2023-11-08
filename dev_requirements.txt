@@ -8,3 +8,4 @@ freezegun
 mock
 munch
 bokeh
+backoff
