@@ -18,23 +18,21 @@ __all__ = [
     "initialize",
 ]
 
-import os
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
 )
 
-from neptune.internal.operation_processors.async_operation_processor import AsyncOperationProcessor
-from neptune.internal.operation_processors.operation_processor import OperationProcessor
-from neptune.internal.operation_processors.partitioned_operation_processor import PartitionedOperationProcessor
-from neptune.metadata_containers import metadata_container
-
-from neptune_experimental.env import NEPTUNE_ASYNC_BATCH_SIZE
 from neptune_experimental.utils import wrap_method
+
+if TYPE_CHECKING:
+    from neptune.internal.operation_processors.async_operation_processor import AsyncOperationProcessor
 
 
 def initialize() -> None:
-    wrap_method(obj=metadata_container, method="get_operation_processor", wrapper=custom_get_operation_processor)
+    from neptune.internal.operation_processors.async_operation_processor import AsyncOperationProcessor
+
     wrap_method(obj=AsyncOperationProcessor, method="__init__", wrapper=custom_init_async_op_processor)
     wrap_method(obj=AsyncOperationProcessor, method="_check_queue_size", wrapper=custom_check_queue_size)
     wrap_method(obj=AsyncOperationProcessor.ConsumerThread, method="__init__", wrapper=custom_init_consumer_thread)
@@ -61,16 +59,6 @@ class MonotonicIncBatchSize:
         return self._current_size
 
 
-def custom_get_operation_processor(*args: Any, original: Callable[..., Any], **kwargs: Any) -> OperationProcessor:
-    processor = original(*args, **kwargs)
-
-    if isinstance(processor, PartitionedOperationProcessor) or isinstance(processor, AsyncOperationProcessor):
-        batch_size = int(os.environ.get(NEPTUNE_ASYNC_BATCH_SIZE) or "1000")
-        processor.batch_size = batch_size
-
-    return processor
-
-
 def custom_init_async_op_processor(
     self: "AsyncOperationProcessor", *args: Any, original: Callable[..., Any], **kwargs: Any
 ) -> None:
@@ -79,8 +67,12 @@ def custom_init_async_op_processor(
     self._consumer._m_batch_size = self._m_batch_size
 
 
-def custom_check_queue_size(self: "AsyncOperationProcessor", *args: Any, **kwargs: Any) -> bool:
-    return bool(self._queue.size() > self._m_batch_size.get() / 2)
+def custom_check_queue_size(
+    self: "AsyncOperationProcessor", *args: Any, original: Callable[..., bool], **kwargs: Any
+) -> bool:
+    if hasattr(self, "_m_batch_size") and self._m_batch_size is not None:
+        return bool(self._queue.size() > self._m_batch_size.get() / 2)
+    return original(*args, **kwargs)
 
 
 def custom_init_consumer_thread(
