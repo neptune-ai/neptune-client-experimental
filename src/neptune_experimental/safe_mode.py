@@ -24,15 +24,6 @@ from typing import (
     Tuple,
 )
 
-from neptune import (
-    Model,
-    ModelVersion,
-    Project,
-    Run,
-)
-from neptune.common.warnings import warn_once
-from neptune.handler import Handler
-
 from neptune_experimental.env import NEPTUNE_SAFETY_MODE
 from neptune_experimental.utils import override_method
 
@@ -46,6 +37,9 @@ def initialize() -> None:
 
 
 def override_model() -> None:
+    from neptune import Model
+    from neptune.handler import Handler
+
     override_method(obj=Model, method="__getitem__", method_factory=safe_function(Handler(None, None)))
     override_method(obj=Model, method="__setitem__", method_factory=safe_function(None))
     override_method(obj=Model, method="assign", method_factory=safe_function(None))
@@ -69,6 +63,9 @@ def override_model() -> None:
 
 
 def override_model_version() -> None:
+    from neptune import ModelVersion
+    from neptune.handler import Handler
+
     override_method(obj=ModelVersion, method="__getitem__", method_factory=safe_function(Handler(None, None)))
     override_method(obj=ModelVersion, method="__setitem__", method_factory=safe_function(None))
     override_method(obj=ModelVersion, method="assign", method_factory=safe_function(None))
@@ -90,6 +87,9 @@ def override_model_version() -> None:
 
 
 def override_project() -> None:
+    from neptune import Project
+    from neptune.handler import Handler
+
     override_method(obj=Project, method="__getitem__", method_factory=safe_function(Handler(None, None)))
     override_method(obj=Project, method="__setitem__", method_factory=safe_function(None))
     override_method(obj=Project, method="assign", method_factory=safe_function(None))
@@ -114,6 +114,9 @@ def override_project() -> None:
 
 
 def override_run() -> None:
+    from neptune import Run
+    from neptune.handler import Handler
+
     override_method(obj=Run, method="__getitem__", method_factory=safe_function(Handler(None, None)))
     override_method(obj=Run, method="__setitem__", method_factory=safe_function(None))
     override_method(obj=Run, method="assign", method_factory=safe_function(None))
@@ -137,6 +140,8 @@ def override_run() -> None:
 
 
 def override_handler() -> None:
+    from neptune.handler import Handler
+
     override_method(obj=Handler, method="__getitem__", method_factory=safe_function(None))
     override_method(obj=Handler, method="__setitem__", method_factory=safe_function(None))
     override_method(obj=Handler, method="__getattr__", method_factory=safe_function(None))
@@ -162,10 +167,14 @@ def override_handler() -> None:
 
 
 def safe_function(default_return_value: Any = None) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    from neptune.common.warnings import warn_once
+
+    safe_mode_enabled = os.getenv(NEPTUNE_SAFETY_MODE, "false").lower() in ("true", "1", "t")
+
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
         def wrapper(*args: Tuple, **kwargs: Dict[str, Any]) -> Any:
-            if os.getenv(NEPTUNE_SAFETY_MODE, "false").lower() in ("true", "1", "t"):
+            if safe_mode_enabled:
                 try:
                     return func(*args, **kwargs)
                 except Exception as ex:
