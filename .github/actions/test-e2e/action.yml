@@ -34,7 +34,7 @@ runs:
 
     - name: E2E - ${{ inputs.module }}
       run: |
-        pytest --cov=neptune --cov-report xml \
+        pytest
         -v neptune_client/tests/e2e/ -m "${{ inputs.module }}" \
         --timeout=600 --timeout_method=thread \
         --color=yes
