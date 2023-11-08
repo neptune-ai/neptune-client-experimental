@@ -18,14 +18,19 @@ __all__ = ["initialize"]
 import functools
 import os
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
     Tuple,
+    Type,
 )
 
 from neptune_experimental.env import NEPTUNE_SAFETY_MODE
 from neptune_experimental.utils import override_method
+
+if TYPE_CHECKING:
+    from neptune.metadata_containers import MetadataContainer
 
 
 def initialize() -> None:
@@ -36,106 +41,55 @@ def initialize() -> None:
     override_handler()
 
 
-def override_model() -> None:
-    from neptune import Model
+def override_common_operations(obj: Type["MetadataContainer"]) -> None:
     from neptune.handler import Handler
 
-    override_method(obj=Model, method="__getitem__", method_factory=safe_function(Handler(None, None)))
-    override_method(obj=Model, method="__setitem__", method_factory=safe_function(None))
-    override_method(obj=Model, method="assign", method_factory=safe_function(None))
-    override_method(obj=Model, method="fetch", method_factory=safe_function({}))
-    override_method(obj=Model, method="ping", method_factory=safe_function(None))
-    override_method(obj=Model, method="start", method_factory=safe_function(None))
-    override_method(obj=Model, method="stop", method_factory=safe_function(None))
-    override_method(obj=Model, method="get_state", method_factory=safe_function(None))
-    override_method(obj=Model, method="get_structure", method_factory=safe_function({}))
-    override_method(obj=Model, method="print_structure", method_factory=safe_function(None))
-    override_method(obj=Model, method="define", method_factory=safe_function(None))
-    override_method(obj=Model, method="get_attribute", method_factory=safe_function(None))
-    override_method(obj=Model, method="set_attribute", method_factory=safe_function(None))
-    override_method(obj=Model, method="exists", method_factory=safe_function(False))
-    override_method(obj=Model, method="pop", method_factory=safe_function(None))
-    override_method(obj=Model, method="wait", method_factory=safe_function(None))
-    override_method(obj=Model, method="sync", method_factory=safe_function(None))
-    override_method(obj=Model, method="get_root_object", method_factory=safe_function(None))
-    override_method(obj=Model, method="get_url", method_factory=safe_function(None))
+    override_method(obj=obj, method="__getitem__", method_factory=safe_function(Handler(None, None)))
+    override_method(obj=obj, method="__setitem__", method_factory=safe_function(None))
+    override_method(obj=obj, method="assign", method_factory=safe_function(None))
+    override_method(obj=obj, method="fetch", method_factory=safe_function({}))
+    override_method(obj=obj, method="ping", method_factory=safe_function(None))
+    override_method(obj=obj, method="start", method_factory=safe_function(None))
+    override_method(obj=obj, method="stop", method_factory=safe_function(None))
+    override_method(obj=obj, method="get_state", method_factory=safe_function(None))
+    override_method(obj=obj, method="get_structure", method_factory=safe_function({}))
+    override_method(obj=obj, method="print_structure", method_factory=safe_function(None))
+    override_method(obj=obj, method="define", method_factory=safe_function(None))
+    override_method(obj=obj, method="get_attribute", method_factory=safe_function(None))
+    override_method(obj=obj, method="set_attribute", method_factory=safe_function(None))
+    override_method(obj=obj, method="exists", method_factory=safe_function(False))
+    override_method(obj=obj, method="pop", method_factory=safe_function(None))
+    override_method(obj=obj, method="wait", method_factory=safe_function(None))
+    override_method(obj=obj, method="sync", method_factory=safe_function(None))
+    override_method(obj=obj, method="get_root_object", method_factory=safe_function(None))
+    override_method(obj=obj, method="get_url", method_factory=safe_function(None))
+
+
+def override_model() -> None:
+    from neptune import Model
+
+    override_common_operations(obj=Model)
     override_method(obj=Model, method="fetch_model_versions_table", method_factory=safe_function(None))
 
 
 def override_model_version() -> None:
     from neptune import ModelVersion
-    from neptune.handler import Handler
 
-    override_method(obj=ModelVersion, method="__getitem__", method_factory=safe_function(Handler(None, None)))
-    override_method(obj=ModelVersion, method="__setitem__", method_factory=safe_function(None))
-    override_method(obj=ModelVersion, method="assign", method_factory=safe_function(None))
-    override_method(obj=ModelVersion, method="fetch", method_factory=safe_function({}))
-    override_method(obj=ModelVersion, method="ping", method_factory=safe_function(None))
-    override_method(obj=ModelVersion, method="start", method_factory=safe_function(None))
-    override_method(obj=ModelVersion, method="stop", method_factory=safe_function(None))
-    override_method(obj=ModelVersion, method="get_state", method_factory=safe_function(None))
-    override_method(obj=ModelVersion, method="get_structure", method_factory=safe_function({}))
-    override_method(obj=ModelVersion, method="print_structure", method_factory=safe_function(None))
-    override_method(obj=ModelVersion, method="define", method_factory=safe_function(None))
-    override_method(obj=ModelVersion, method="get_attribute", method_factory=safe_function(None))
-    override_method(obj=ModelVersion, method="set_attribute", method_factory=safe_function(None))
-    override_method(obj=ModelVersion, method="exists", method_factory=safe_function(False))
-    override_method(obj=ModelVersion, method="pop", method_factory=safe_function(None))
-    override_method(obj=ModelVersion, method="wait", method_factory=safe_function(None))
-    override_method(obj=ModelVersion, method="sync", method_factory=safe_function(None))
-    override_method(obj=ModelVersion, method="get_root_object", method_factory=safe_function(None))
+    override_common_operations(obj=ModelVersion)
 
 
 def override_project() -> None:
     from neptune import Project
-    from neptune.handler import Handler
 
-    override_method(obj=Project, method="__getitem__", method_factory=safe_function(Handler(None, None)))
-    override_method(obj=Project, method="__setitem__", method_factory=safe_function(None))
-    override_method(obj=Project, method="assign", method_factory=safe_function(None))
-    override_method(obj=Project, method="fetch", method_factory=safe_function({}))
-    override_method(obj=Project, method="ping", method_factory=safe_function(None))
-    override_method(obj=Project, method="start", method_factory=safe_function(None))
-    override_method(obj=Project, method="stop", method_factory=safe_function(None))
-    override_method(obj=Project, method="get_state", method_factory=safe_function(None))
-    override_method(obj=Project, method="get_structure", method_factory=safe_function({}))
-    override_method(obj=Project, method="print_structure", method_factory=safe_function(None))
-    override_method(obj=Project, method="define", method_factory=safe_function(None))
-    override_method(obj=Project, method="get_attribute", method_factory=safe_function(None))
-    override_method(obj=Project, method="set_attribute", method_factory=safe_function(None))
-    override_method(obj=Project, method="exists", method_factory=safe_function(False))
-    override_method(obj=Project, method="pop", method_factory=safe_function(None))
-    override_method(obj=Project, method="wait", method_factory=safe_function(None))
-    override_method(obj=Project, method="sync", method_factory=safe_function(None))
-    override_method(obj=Project, method="get_root_object", method_factory=safe_function(None))
-    override_method(obj=Project, method="get_url", method_factory=safe_function(None))
+    override_common_operations(obj=Project)
     override_method(obj=Project, method="fetch_runs_table", method_factory=safe_function(None))
     override_method(obj=Project, method="fetch_models_table", method_factory=safe_function(None))
 
 
 def override_run() -> None:
     from neptune import Run
-    from neptune.handler import Handler
 
-    override_method(obj=Run, method="__getitem__", method_factory=safe_function(Handler(None, None)))
-    override_method(obj=Run, method="__setitem__", method_factory=safe_function(None))
-    override_method(obj=Run, method="assign", method_factory=safe_function(None))
-    override_method(obj=Run, method="fetch", method_factory=safe_function({}))
-    override_method(obj=Run, method="ping", method_factory=safe_function(None))
-    override_method(obj=Run, method="start", method_factory=safe_function(None))
-    override_method(obj=Run, method="stop", method_factory=safe_function(None))
-    override_method(obj=Run, method="get_state", method_factory=safe_function(None))
-    override_method(obj=Run, method="get_structure", method_factory=safe_function({}))
-    override_method(obj=Run, method="print_structure", method_factory=safe_function(None))
-    override_method(obj=Run, method="define", method_factory=safe_function(None))
-    override_method(obj=Run, method="get_attribute", method_factory=safe_function(None))
-    override_method(obj=Run, method="set_attribute", method_factory=safe_function(None))
-    override_method(obj=Run, method="exists", method_factory=safe_function(False))
-    override_method(obj=Run, method="pop", method_factory=safe_function(None))
-    override_method(obj=Run, method="wait", method_factory=safe_function(None))
-    override_method(obj=Run, method="sync", method_factory=safe_function(None))
-    override_method(obj=Run, method="get_root_object", method_factory=safe_function(None))
-    override_method(obj=Run, method="get_url", method_factory=safe_function(None))
+    override_common_operations(obj=Run)
     override_method(obj=Run, method="monitoring_namespace", method_factory=safe_function(None))
 
 
