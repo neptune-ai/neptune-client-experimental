@@ -7,3 +7,4 @@ Faker
 freezegun
 mock
 munch
+bokeh
