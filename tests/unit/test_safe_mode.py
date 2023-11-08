@@ -149,6 +149,7 @@ class TestSafeMode(unittest.TestCase):
         return [
             "__getitem__",
             "__setitem__",
+            "__delitem__",
             "assign",
             "fetch",
             "ping",
@@ -174,6 +175,7 @@ class TestSafeMode(unittest.TestCase):
         return [
             "__getitem__",
             "__setitem__",
+            "__delitem__",
             "assign",
             "fetch",
             "ping",
@@ -200,6 +202,7 @@ class TestSafeMode(unittest.TestCase):
         return [
             "__getitem__",
             "__setitem__",
+            "__delitem__",
             "assign",
             "fetch",
             "ping",
@@ -225,6 +228,7 @@ class TestSafeMode(unittest.TestCase):
         return [
             "__getitem__",
             "__setitem__",
+            "__delitem__",
             "assign",
             "fetch",
             "ping",
@@ -241,6 +245,7 @@ class TestSafeMode(unittest.TestCase):
             "wait",
             "sync",
             "get_root_object",
+            "change_stage",
         ]
 
     @property
