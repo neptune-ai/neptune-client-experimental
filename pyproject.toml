@@ -14,6 +14,9 @@ python = "^3.7"
 # Base neptune package
 neptune = "^1.8.2"
 
+# For 3.7 compatibility
+typing_extensions = "^4.0.0"
+
 
 [tool.poetry]
 authors = ["neptune.ai <contact@neptune.ai>"]
@@ -55,6 +58,7 @@ packages = [
 [tool.poetry.plugins."neptune.extensions"]
 "experimental_remote_signals" = "neptune_experimental.remote_signals:initialize"
 "experimental_operation_error_processor" = "neptune_experimental.operation_error_processor:initialize"
+"experimental_incremental_batch_size" = "neptune_experimental.incremental_batch_size:initialize"
 "experimental_safe_mode" = "neptune_experimental.safe_mode:initialize"
 
 [tool.poetry.urls]

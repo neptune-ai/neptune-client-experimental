@@ -20,10 +20,8 @@ from unittest.mock import patch
 from neptune.common.exceptions import NeptuneException
 from neptune.exceptions import MetadataInconsistency
 
-from neptune_experimental.operation_error_processor import (
-    NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS,
-    OperationErrorProcessor,
-)
+from neptune_experimental.env import NEPTUNE_SAMPLE_SERIES_STEPS_ERRORS
+from neptune_experimental.operation_error_processor import OperationErrorProcessor
 
 
 class TestOperationsErrorsProcessor:
