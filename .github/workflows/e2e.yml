@@ -50,7 +50,7 @@ jobs:
   e2e-tests-notify:
     needs: [ e2e ]
     runs-on: ubuntu-latest
-    if: (success() || failure()) && github.ref == 'refs/heads/master'
+    if: (success() || failure()) # && github.ref == 'refs/heads/master'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
