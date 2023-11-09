@@ -46,19 +46,19 @@ jobs:
           os: ${{ matrix.os }}
           module: "not s3 and not integrations"
           name: "standard"
-#
-#  e2e-tests-notify:
-#    needs: [ e2e ]
-#    runs-on: ubuntu-latest
-#    if: (success() || failure()) && github.ref == 'refs/heads/master'
-#    steps:
-#      - name: Checkout repository
-#        uses: actions/checkout@v4
-#        with:
-#          fetch-depth: 0
-#          ref: ${{ github.event.client_payload.pull_request.head.ref }}
-#
-#      - name: Notify
-#        uses: ./.github/actions/workflow-notify
-#        with:
-#          slack-webhook: ${{ secrets.E2E_REGULAR_SLACK_WEBHOOK }}
+
+  e2e-tests-notify:
+    needs: [ e2e ]
+    runs-on: ubuntu-latest
+    if: (success() || failure()) && github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.client_payload.pull_request.head.ref }}
+
+      - name: Notify
+        uses: ./.github/actions/workflow-notify
+        with:
+          slack-webhook: ${{ secrets.E2E_REGULAR_SLACK_WEBHOOK }}
