@@ -60,11 +60,10 @@ class MonotonicIncBatchSize:
 
 
 def custom_init_async_op_processor(
-    self: "AsyncOperationProcessor", *args: Any, original: Callable[..., Any], **kwargs: Any
+    self: "AsyncOperationProcessor", *args: Any, original: Callable[..., Any], batch_size: int = 1000, **kwargs: Any
 ) -> None:
-    original(self, *args, **kwargs)
-    self._incremental_batch_size = MonotonicIncBatchSize(size_limit=self._batch_size)
-    self._consumer._incremental_batch_size = self._incremental_batch_size
+    self._incremental_batch_size = MonotonicIncBatchSize(size_limit=batch_size)
+    original(self, *args, batch_size=batch_size, **kwargs)
 
 
 def custom_check_queue_size(
@@ -79,12 +78,13 @@ def custom_init_consumer_thread(
     self: "AsyncOperationProcessor.ConsumerThread", *args: Any, original: Callable[..., Any], **kwargs: Any
 ) -> None:
     original(self, *args, **kwargs)
-    self._incremental_batch_size = None
+    self._batch_size = self._processor._incremental_batch_size.get()
 
 
 def custom_process_batch(
     self: "AsyncOperationProcessor.ConsumerThread", *args: Any, original: Callable[..., Any], **kwargs: Any
 ) -> None:
     original(self, *args, **kwargs)
-    if self._incremental_batch_size is not None:
-        self._incremental_batch_size.increase()
+    if self._processor._incremental_batch_size is not None:
+        self._processor._incremental_batch_size.increase()
+        self._batch_size = self._processor._incremental_batch_size.get()
