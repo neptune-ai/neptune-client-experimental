@@ -1,4 +1,4 @@
-## [UNRELEASED] neptune-experimental 0.0.3
+## neptune-experimental 0.1.0
 
 ### Features
 - Safety (errors suppressing) execution mode ([#8](https://github.com/neptune-ai/neptune-client-experimental/pull/8))
