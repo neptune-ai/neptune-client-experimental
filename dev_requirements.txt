@@ -18,3 +18,7 @@ pytest-xdist
 tensorflow
 torch
 vega_datasets
+optuna
+scikit-learn
+torchvision
+accelerate
