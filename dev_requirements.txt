@@ -15,6 +15,8 @@ pytest-cov
 pytest-mock
 pytest-timeout
 pytest-xdist
+
+# Get rid of these
 tensorflow
 torch
 vega_datasets
@@ -22,3 +24,5 @@ optuna
 scikit-learn
 torchvision
 accelerate
+transformers
+pytorch-lightning
