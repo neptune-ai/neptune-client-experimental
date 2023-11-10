@@ -7,7 +7,7 @@ on:
     - cron: "30 4 * * *" # Run every day at arbitrary time (4:30 AM UTC)
   push:
     branches:
-      - master
+      - main
 
 env:
   WORKSPACE_NAME: e2e-tests
@@ -53,7 +53,7 @@ jobs:
   e2e-tests-notify:
     needs: [ e2e ]
     runs-on: ubuntu-latest
-    if: (success() || failure()) && github.ref == 'refs/heads/master'
+    if: (success() || failure()) && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
