@@ -1,4 +1,4 @@
-## [UNRELEASED] neptune-experimental 0.0.3
+## neptune-experimental 0.1.0
 
 ### Features
 - Added support for sending operations in parallel ([#15](https://github.com/neptune-ai/neptune-client-experimental/pull/15))
