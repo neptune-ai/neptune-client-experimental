@@ -1,3 +1,9 @@
+## [UNRELEASED] neptune-experimental 0.2.0
+
+### Features
+- Added default run name handling ([#18](https://github.com/neptune-ai/neptune-client-experimental/pull/18))
+
+
 ## neptune-experimental 0.1.0
 
 ### Features
