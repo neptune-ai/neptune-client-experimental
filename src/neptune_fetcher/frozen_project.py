@@ -20,15 +20,11 @@ from typing import (
     List,
     Optional,
     TypeVar,
+    Union,
 )
 
 from icecream import ic
 from neptune import Project
-from neptune.common.warnings import NeptuneUnsupportedType
-from neptune.internal.backends.api_model import (
-    Attribute,
-    AttributeType,
-)
 from neptune.internal.backends.hosted_neptune_backend import HostedNeptuneBackend
 from neptune.internal.backends.nql import NQLEmptyQuery
 from neptune.internal.backends.project_name_lookup import project_name_lookup
@@ -44,13 +40,10 @@ from neptune.metadata_containers.metadata_containers_table import (
     TableEntry,
 )
 
-from neptune_fetcher.attributes import (
-    Attr,
-    Boolean,
-    Datetime,
-    Float,
-    Integer,
-    String,
+from neptune_fetcher.fetchable import (
+    Fetchable,
+    FetchableSeries,
+    fetchable_or_fetchable_series,
 )
 
 T = TypeVar("T")
@@ -64,36 +57,6 @@ def _get_attribute(entry: TableEntry, name: str) -> Optional[str]:
         return entry.get_attribute_value(name)
     except ValueError:
         return None
-
-
-class Fetchable:
-    def __init__(
-        self, attribute: Attribute, backend: "NeptuneBackend", container_id: str, cache: Dict[str, Attr]
-    ) -> None:
-        self._attribute = attribute
-        self._backend = backend
-        self._container_id = container_id
-        self._cache = cache
-
-    def fetch(self):
-        if self._attribute.path in self._cache:
-            print("From cache")
-            return self._cache[self._attribute.path].val
-        if self._attribute.type == AttributeType.STRING:
-            attr = String(self._attribute.type)
-        elif self._attribute.type == AttributeType.INT:
-            attr = Integer(self._attribute.type)
-        elif self._attribute.type == AttributeType.BOOL:
-            attr = Boolean(self._attribute.type)
-        elif self._attribute.type == AttributeType.DATETIME:
-            attr = Datetime(self._attribute.type)
-        elif self._attribute.type == AttributeType.FLOAT:
-            attr = Float(self._attribute.type)
-        else:
-            raise NeptuneUnsupportedType()
-        attr.val = attr.fetch(self._backend, self._container_id, ContainerType.RUN, [self._attribute.path])
-        self._cache[self._attribute.path] = attr
-        return attr.val
 
 
 class FrozenProject:
@@ -142,7 +105,7 @@ class FrozenProject:
             self.project = project
             self._cache = dict()
             self._structure = {
-                attribute.path: Fetchable(
+                attribute.path: fetchable_or_fetchable_series(
                     attribute,
                     self.project._backend,
                     self._container_id,
@@ -151,7 +114,7 @@ class FrozenProject:
                 for attribute in self.project._backend.get_attributes(self._container_id, ContainerType.RUN)
             }
 
-        def __getitem__(self, item) -> Fetchable:
+        def __getitem__(self, item) -> Union[Fetchable, FetchableSeries]:
             return self._structure[item]
 
             # self._structure['a/b/c'] = Attribute(type=AttributeType.INT)
@@ -170,7 +133,7 @@ if __name__ == "__main__":
     project = FrozenProject(workspace="aleksander.wojnarowicz", project="misc")
     ids = list(map(lambda row: row["sys/id"], project.list_runs()))
 
-    run = next(project.fetch_runs(["MIS-1429"]))
+    run = next(project.fetch_runs(["MIS-1419"]))
 
     ic(run["sys/id"].fetch())
     ic(run["sys/owner"].fetch())
@@ -183,3 +146,6 @@ if __name__ == "__main__":
     ic(run["sys/creation_time"].fetch())
     ic(run["sys/monitoring_time"].fetch())
     ic(run._cache)
+    ic(run["monitoring/9401b02f/cpu"].fetch_values())
+    ic(run["monitoring/9401b02f/cpu"].fetch_values())
+    ic(run["monitoring/9401b02f/cpu"].fetch_last())
