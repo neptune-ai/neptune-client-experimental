@@ -56,7 +56,7 @@ class Series:
 
     @staticmethod
     def _fetch_values_from_backend(backend, container_id, container_type, path, offset, limit) -> Row:
-        pass
+        ...
 
     @staticmethod
     def fetch_last(backend, container_id, container_type, path):
@@ -71,6 +71,16 @@ class FloatSeries(Series):
     @staticmethod
     def fetch_last(backend, container_id, container_type, path):
         return backend.get_float_series_attribute(container_id, container_type, [path]).last
+
+
+class StringSeries(Series):
+    @staticmethod
+    def _fetch_values_from_backend(backend, container_id, container_type, path, offset, limit) -> Row:
+        return backend.get_string_series_values(container_id, container_type, path, offset, limit)
+
+    @staticmethod
+    def fetch_last(backend, container_id, container_type, path) -> str:
+        return backend.get_string_series_attribute(container_id, container_type, path).last
 
 
 @dataclass

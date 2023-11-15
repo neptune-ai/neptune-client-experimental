@@ -20,6 +20,7 @@ from neptune_fetcher.attributes import (
     Integer,
     Series,
     String,
+    StringSeries,
 )
 
 if TYPE_CHECKING:
@@ -88,6 +89,8 @@ class FetchableSeries:
             return self._cache[self._attribute.path].values
         if self._attribute.type == AttributeType.FLOAT_SERIES:
             series = FloatSeries()
+        elif self._attribute.type == AttributeType.STRING_SERIES:
+            series = StringSeries()
         else:
             raise NeptuneUnsupportedType()
         series.values = series.fetch_values(
@@ -97,9 +100,10 @@ class FetchableSeries:
         return series.values
 
     def fetch_last(self):
-
         if self._attribute.type == AttributeType.FLOAT_SERIES:
             series = FloatSeries()
+        elif self._attribute.type == AttributeType.STRING_SERIES:
+            series = StringSeries()
         else:
             raise NeptuneUnsupportedType()
         series.last = series.fetch_last(self._backend, self._container_id, ContainerType.RUN, self._attribute.path)
