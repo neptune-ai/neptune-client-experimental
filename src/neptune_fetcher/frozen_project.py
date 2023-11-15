@@ -16,33 +16,52 @@
 from abc import ABC
 from dataclasses import dataclass
 from typing import (
-    Optional,
     TYPE_CHECKING,
-    Generator, List, Dict, TypeVar, Generic,
+    Dict,
+    Generator,
+    Generic,
+    List,
+    Optional,
+    TypeVar,
 )
 
-from neptune import Project
-from neptune.common.backends.utils import with_api_exceptions_handler
-from neptune.common.envs import API_TOKEN_ENV_NAME
-from neptune.internal.backends.api_model import Attribute, AttributeType
-from neptune.internal.backends.hosted_client import DEFAULT_REQUEST_KWARGS
-from neptune.internal.backends.hosted_neptune_backend import HostedNeptuneBackend
-from neptune.internal.backends.project_name_lookup import project_name_lookup
-from neptune.internal.credentials import Credentials
-
-from neptune.internal.backends.factory import get_backend
-from neptune.internal.id_formats import QualifiedName, UniqueId
-from neptune.management.internal.utils import normalize_project_name
-from neptune.types.mode import Mode
-from neptune.internal.container_type import ContainerType
-from neptune.internal.backends.nql import NQLEmptyQuery
-from neptune.metadata_containers.metadata_containers_table import Table, TableEntry
-
 from icecream import ic
+from neptune import Project
+from neptune.attributes.atoms.integer import Integer as IntegerAttr
+from neptune.attributes.atoms.string import String as StringAttr
+from neptune.internal.backends.api_model import (
+    Attribute,
+    AttributeType,
+)
+from neptune.internal.backends.hosted_neptune_backend import HostedNeptuneBackend
+from neptune.internal.backends.nql import NQLEmptyQuery
+from neptune.internal.backends.project_name_lookup import project_name_lookup
+from neptune.internal.container_type import ContainerType
+from neptune.internal.credentials import Credentials
+from neptune.internal.id_formats import (
+    QualifiedName,
+    UniqueId,
+)
+from neptune.management.internal.utils import normalize_project_name
+from neptune.metadata_containers.metadata_containers_table import (
+    Table,
+    TableEntry,
+)
 
+T = TypeVar("T")
 
 if TYPE_CHECKING:
     from neptune.internal.backends.neptune_backend import NeptuneBackend
+
+
+@dataclass
+class Attr(Generic[T], ABC):
+    type: AttributeType
+    val: Optional[T] = None
+
+    @staticmethod
+    def fetch(backend, container_id, container_type, path) -> T:
+        ...
 
 
 def _get_attribute(entry: TableEntry, name: str) -> Optional[str]:
@@ -52,59 +71,8 @@ def _get_attribute(entry: TableEntry, name: str) -> Optional[str]:
         return None
 
 
-class CustomBackend(HostedNeptuneBackend):
-    @with_api_exceptions_handler
-    def get_attributes(self, container_id: str, container_type: ContainerType) -> List[Attribute]:
-        def to_attribute(attr) -> Attribute:
-            return Attribute(attr.name, AttributeType(attr.type))
-
-        params = {
-            "experimentId": container_id,
-            **DEFAULT_REQUEST_KWARGS,
-        }
-        try:
-            experiment = self.leaderboard_client.api.queryAttributeDefinitions(**params).response().result
-
-            attribute_type_names = [at.value for at in AttributeType]
-            accepted_attributes = [attr for attr in experiment.attributes if attr.type in attribute_type_names]
-
-            # Notify about ignored attrs
-            ignored_attributes = set(attr.type for attr in experiment.attributes) - set(
-                attr.type for attr in accepted_attributes
-            )
-            if ignored_attributes:
-                _logger.warning(
-                    "Ignored following attributes (unknown type): %s.\n" "Try to upgrade `neptune`.",
-                    ignored_attributes,
-                )
-
-            return [to_attribute(attr) for attr in accepted_attributes if attr.type in attribute_type_names]
-        except HTTPNotFound as e:
-            raise ContainerUUIDNotFound(
-                container_id=container_id,
-                container_type=container_type,
-            ) from e
-
-
-T = TypeVar("T")
-
-
 @dataclass
-class Attribute(Generic[T], ABC):
-    type: AttributeType
-    value: T
-
-    @staticmethod
-    def fetch(backend, container_id, container_type, path) -> T:
-        ...
-
-
-from neptune.attributes.atoms.integer import Integer as IntegerAttr
-from neptune.attributes.atoms.string import String as StringAttr
-
-@dataclass
-class Integer(Attribute[int]):
-
+class Integer(Attr[int]):
     @staticmethod
     def fetch(backend, container_id, container_type, path) -> int:
         return IntegerAttr.getter(
@@ -116,8 +84,7 @@ class Integer(Attribute[int]):
 
 
 @dataclass
-class String(Attribute[str]):
-
+class String(Attr[str]):
     @staticmethod
     def fetch(backend, container_id, container_type, path) -> str:
         return StringAttr.getter(
@@ -128,24 +95,40 @@ class String(Attribute[str]):
         )
 
 
+class Fetchable:
+    def __init__(
+        self, attribute: Attribute, backend: "NeptuneBackend", container_id: str, cache: Dict[str, Attr]
+    ) -> None:
+        self._attribute = attribute
+        self._backend = backend
+        self._container_id = container_id
+        self._cache = cache
+
+    def fetch(self):
+        if self._attribute.path in self._cache:
+            print("From cache")
+            return self._cache[self._attribute.path].val
+        if self._attribute.type == AttributeType.STRING:
+            attr = String(self._attribute.type)
+        else:
+            attr = Integer(self._attribute.type)
+        attr.val = attr.fetch(self._backend, self._container_id, ContainerType.RUN, [self._attribute.path])
+        self._cache[self._attribute.path] = attr
+        return attr.val
+
+
 class FrozenProject:
     def __init__(
-            self,
-            project: Optional[str] = None,
-            api_token: Optional[str] = None,
-            proxies: Optional[dict] = None
+        self, project: Optional[str] = None, api_token: Optional[str] = None, proxies: Optional[dict] = None
     ) -> None:
         self._project: Optional[str] = project
         self._backend: NeptuneBackend = HostedNeptuneBackend(
-            credentials=Credentials.from_token(api_token=api_token),
-            proxies=proxies
+            credentials=Credentials.from_token(api_token=api_token), proxies=proxies
         )
 
         # TODO: Add workspace
         self.project_identifier = normalize_project_name(name=project, workspace=None)
-        self._project_api_object: Project = project_name_lookup(
-            backend=self._backend, name=self.project_identifier
-        )
+        self._project_api_object: Project = project_name_lookup(backend=self._backend, name=self.project_identifier)
         self._project_id: UniqueId = self._project_api_object.id
 
     def list_runs(self) -> Generator[Dict[str, Optional[str]], None, None]:
@@ -157,44 +140,59 @@ class FrozenProject:
         )
 
         for row in Table(
-                backend=self._backend,
-                container_type=ContainerType.RUN,
-                entries=leaderboard_entries
+            backend=self._backend, container_type=ContainerType.RUN, entries=leaderboard_entries
         ).to_rows():
             yield {
-                "sys/id": _get_attribute(entry=row, name='sys/id'),
-                "sys/name": _get_attribute(entry=row, name='sys/name'),
+                "sys/id": _get_attribute(entry=row, name="sys/id"),
+                "sys/name": _get_attribute(entry=row, name="sys/name"),
             }
 
     def fetch_runs(self, with_ids: List[str]) -> Generator["FrozenProject.FrozenRun", None, None]:
         for run_id in with_ids:
             yield FrozenProject.FrozenRun(
-                project=self,
-                container_id=QualifiedName(f"{self.project_identifier}/{run_id}")
+                project=self, container_id=QualifiedName(f"{self.project_identifier}/{run_id}")
             )
 
     class FrozenRun:
         def __init__(self, project: "FrozenProject", container_id: QualifiedName) -> None:
             self._container_id = container_id
             self.project = project
-            self._structure = dict()
             self._cache = dict()
+            self._structure = {
+                attribute.path: Fetchable(
+                    attribute,
+                    self.project._backend,
+                    self._container_id,
+                    self._cache,
+                )
+                for attribute in self.project._backend.get_attributes(self._container_id, ContainerType.RUN)
+            }
 
-            self._structure['a/b/c'] = Attribute(type=AttributeType.INT)
-            # fetch
-            self._cache['a/b/c'] = Integer(type=AttributeType.INT, value=4)
-            # clear cache
-            del self._cache['a/b/c']
+        def __getitem__(self, item) -> Fetchable:
+            return self._structure[item]
 
-        def __delattr__(self, item) -> None:
-            del self._cache[item]
+            # self._structure['a/b/c'] = Attribute(type=AttributeType.INT)
+            # # fetch
+            # self._cache['a/b/c'] = Integer(type=AttributeType.INT, value=4)
+            # # clear cache
+            # del self._cache['a/b/c']
+
+        def __delitem__(self, key: str) -> None:
+            del self._cache[key]
 
             # queryAttributeDefinitions
 
 
-if __name__ == '__main__':
-    project = FrozenProject(project="rafal.neptune/test")
-    ids = list(map(lambda row: row['sys/id'], project.list_runs()))
+if __name__ == "__main__":
+    project = FrozenProject(project="aleksander.wojnarowicz/misc")
+    ids = list(map(lambda row: row["sys/id"], project.list_runs()))
 
-    for run_info in project.fetch_runs(with_ids=ids):
-        ic(run_info._container_id)
+    run = next(project.fetch_runs(["MIS-1429"]))
+
+    ic(run["sys/id"].fetch())
+    ic(run["sys/owner"].fetch())
+    ic(run["sys/owner"].fetch())
+    ic(run._cache)
+    del run["sys/owner"]
+    ic(run._cache)
+    ic(run["sys/owner"].fetch())
