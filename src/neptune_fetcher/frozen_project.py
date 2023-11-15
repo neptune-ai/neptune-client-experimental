@@ -13,14 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from abc import ABC
-from dataclasses import dataclass
-from datetime import datetime
 from typing import (
     TYPE_CHECKING,
     Dict,
     Generator,
-    Generic,
     List,
     Optional,
     TypeVar,
@@ -28,11 +24,6 @@ from typing import (
 
 from icecream import ic
 from neptune import Project
-from neptune.attributes.atoms.boolean import Boolean as BooleanAttr
-from neptune.attributes.atoms.datetime import Datetime as DatetimeAttr
-from neptune.attributes.atoms.float import Float as FloatAttr
-from neptune.attributes.atoms.integer import Integer as IntegerAttr
-from neptune.attributes.atoms.string import String as StringAttr
 from neptune.common.warnings import NeptuneUnsupportedType
 from neptune.internal.backends.api_model import (
     Attribute,
@@ -53,6 +44,15 @@ from neptune.metadata_containers.metadata_containers_table import (
     TableEntry,
 )
 
+from neptune_fetcher.attributes import (
+    Attr,
+    Boolean,
+    Datetime,
+    Float,
+    Integer,
+    String,
+)
+
 T = TypeVar("T")
 
 if TYPE_CHECKING:
@@ -64,71 +64,6 @@ def _get_attribute(entry: TableEntry, name: str) -> Optional[str]:
         return entry.get_attribute_value(name)
     except ValueError:
         return None
-
-
-@dataclass
-class Attr(Generic[T], ABC):
-    type: AttributeType
-    val: Optional[T] = None
-
-    @staticmethod
-    def fetch(backend, container_id, container_type, path) -> T:
-        ...
-
-
-class Integer(Attr[int]):
-    @staticmethod
-    def fetch(backend, container_id, container_type, path) -> int:
-        return IntegerAttr.getter(
-            backend=backend,
-            container_id=container_id,
-            container_type=container_type,
-            path=path,
-        )
-
-
-class Float(Attr[float]):
-    @staticmethod
-    def fetch(backend, container_id, container_type, path) -> float:
-        return FloatAttr.getter(
-            backend=backend,
-            container_id=container_id,
-            container_type=container_type,
-            path=path,
-        )
-
-
-class String(Attr[str]):
-    @staticmethod
-    def fetch(backend, container_id, container_type, path) -> str:
-        return StringAttr.getter(
-            backend=backend,
-            container_id=container_id,
-            container_type=container_type,
-            path=path,
-        )
-
-
-class Boolean(Attr[bool]):
-    @staticmethod
-    def fetch(backend, container_id, container_type, path) -> bool:
-        return BooleanAttr.getter(
-            backend=backend,
-            container_id=container_id,
-            container_type=container_type,
-            path=path,
-        )
-
-
-class Datetime(Attr[datetime]):
-    @staticmethod
-    def fetch(backend, container_id, container_type, path) -> datetime:
-        return DatetimeAttr.getter(
-            backend=backend,
-            container_id=container_id,
-            container_type=container_type,
-            path=path,
-        )
 
 
 class Fetchable:
@@ -163,7 +98,11 @@ class Fetchable:
 
 class FrozenProject:
     def __init__(
-        self, project: Optional[str] = None, api_token: Optional[str] = None, proxies: Optional[dict] = None
+        self,
+        project: Optional[str] = None,
+        workspace: Optional[str] = None,
+        api_token: Optional[str] = None,
+        proxies: Optional[dict] = None,
     ) -> None:
         self._project: Optional[str] = project
         self._backend: NeptuneBackend = HostedNeptuneBackend(
@@ -171,7 +110,7 @@ class FrozenProject:
         )
 
         # TODO: Add workspace
-        self.project_identifier = normalize_project_name(name=project, workspace=None)
+        self.project_identifier = normalize_project_name(name=project, workspace=workspace)
         self._project_api_object: Project = project_name_lookup(backend=self._backend, name=self.project_identifier)
         self._project_id: UniqueId = self._project_api_object.id
 
@@ -228,7 +167,7 @@ class FrozenProject:
 
 
 if __name__ == "__main__":
-    project = FrozenProject(project="aleksander.wojnarowicz/misc")
+    project = FrozenProject(workspace="aleksander.wojnarowicz", project="misc")
     ids = list(map(lambda row: row["sys/id"], project.list_runs()))
 
     run = next(project.fetch_runs(["MIS-1429"]))
