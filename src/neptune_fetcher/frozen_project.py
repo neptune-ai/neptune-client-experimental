@@ -15,6 +15,7 @@
 #
 from abc import ABC
 from dataclasses import dataclass
+from datetime import datetime
 from typing import (
     TYPE_CHECKING,
     Dict,
@@ -27,8 +28,12 @@ from typing import (
 
 from icecream import ic
 from neptune import Project
+from neptune.attributes.atoms.boolean import Boolean as BooleanAttr
+from neptune.attributes.atoms.datetime import Datetime as DatetimeAttr
+from neptune.attributes.atoms.float import Float as FloatAttr
 from neptune.attributes.atoms.integer import Integer as IntegerAttr
 from neptune.attributes.atoms.string import String as StringAttr
+from neptune.common.warnings import NeptuneUnsupportedType
 from neptune.internal.backends.api_model import (
     Attribute,
     AttributeType,
@@ -54,6 +59,13 @@ if TYPE_CHECKING:
     from neptune.internal.backends.neptune_backend import NeptuneBackend
 
 
+def _get_attribute(entry: TableEntry, name: str) -> Optional[str]:
+    try:
+        return entry.get_attribute_value(name)
+    except ValueError:
+        return None
+
+
 @dataclass
 class Attr(Generic[T], ABC):
     type: AttributeType
@@ -64,14 +76,6 @@ class Attr(Generic[T], ABC):
         ...
 
 
-def _get_attribute(entry: TableEntry, name: str) -> Optional[str]:
-    try:
-        return entry.get_attribute_value(name)
-    except ValueError:
-        return None
-
-
-@dataclass
 class Integer(Attr[int]):
     @staticmethod
     def fetch(backend, container_id, container_type, path) -> int:
@@ -83,11 +87,43 @@ class Integer(Attr[int]):
         )
 
 
-@dataclass
+class Float(Attr[float]):
+    @staticmethod
+    def fetch(backend, container_id, container_type, path) -> float:
+        return FloatAttr.getter(
+            backend=backend,
+            container_id=container_id,
+            container_type=container_type,
+            path=path,
+        )
+
+
 class String(Attr[str]):
     @staticmethod
     def fetch(backend, container_id, container_type, path) -> str:
         return StringAttr.getter(
+            backend=backend,
+            container_id=container_id,
+            container_type=container_type,
+            path=path,
+        )
+
+
+class Boolean(Attr[bool]):
+    @staticmethod
+    def fetch(backend, container_id, container_type, path) -> bool:
+        return BooleanAttr.getter(
+            backend=backend,
+            container_id=container_id,
+            container_type=container_type,
+            path=path,
+        )
+
+
+class Datetime(Attr[datetime]):
+    @staticmethod
+    def fetch(backend, container_id, container_type, path) -> datetime:
+        return DatetimeAttr.getter(
             backend=backend,
             container_id=container_id,
             container_type=container_type,
@@ -110,8 +146,16 @@ class Fetchable:
             return self._cache[self._attribute.path].val
         if self._attribute.type == AttributeType.STRING:
             attr = String(self._attribute.type)
-        else:
+        elif self._attribute.type == AttributeType.INT:
             attr = Integer(self._attribute.type)
+        elif self._attribute.type == AttributeType.BOOL:
+            attr = Boolean(self._attribute.type)
+        elif self._attribute.type == AttributeType.DATETIME:
+            attr = Datetime(self._attribute.type)
+        elif self._attribute.type == AttributeType.FLOAT:
+            attr = Float(self._attribute.type)
+        else:
+            raise NeptuneUnsupportedType()
         attr.val = attr.fetch(self._backend, self._container_id, ContainerType.RUN, [self._attribute.path])
         self._cache[self._attribute.path] = attr
         return attr.val
@@ -196,3 +240,7 @@ if __name__ == "__main__":
     del run["sys/owner"]
     ic(run._cache)
     ic(run["sys/owner"].fetch())
+    ic(run["sys/failed"].fetch())
+    ic(run["sys/creation_time"].fetch())
+    ic(run["sys/monitoring_time"].fetch())
+    ic(run._cache)
