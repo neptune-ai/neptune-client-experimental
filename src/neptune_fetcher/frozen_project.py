@@ -42,8 +42,7 @@ from neptune.metadata_containers.metadata_containers_table import (
 
 from neptune_fetcher.fetchable import (
     Fetchable,
-    FetchableSeries,
-    fetchable_or_fetchable_series,
+    which_fetchable,
 )
 
 T = TypeVar("T")
@@ -105,7 +104,7 @@ class FrozenProject:
             self.project = project
             self._cache = dict()
             self._structure = {
-                attribute.path: fetchable_or_fetchable_series(
+                attribute.path: which_fetchable(
                     attribute,
                     self.project._backend,
                     self._container_id,
@@ -114,7 +113,7 @@ class FrozenProject:
                 for attribute in self.project._backend.get_attributes(self._container_id, ContainerType.RUN)
             }
 
-        def __getitem__(self, item) -> Union[Fetchable, FetchableSeries]:
+        def __getitem__(self, item) -> Union[Fetchable]:
             return self._structure[item]
 
             # self._structure['a/b/c'] = Attribute(type=AttributeType.INT)

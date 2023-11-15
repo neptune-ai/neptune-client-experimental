@@ -1,3 +1,23 @@
+#
+# Copyright (c) 2023, Neptune Labs Sp. z o.o.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+from abc import (
+    ABC,
+    abstractmethod,
+)
 from typing import (
     TYPE_CHECKING,
     Dict,
@@ -19,8 +39,10 @@ from neptune_fetcher.attributes import (
     FloatSeries,
     Integer,
     Series,
+    Set,
     String,
     StringSeries,
+    StringSet,
 )
 
 if TYPE_CHECKING:
@@ -38,18 +60,30 @@ ATOMS = {
     AttributeType.RUN_STATE,
     AttributeType.ARTIFACT,
 }
-SERIES = {AttributeType.FLOAT_SERIES, AttributeType.STRING_SERIES, AttributeType.FILE_SET, AttributeType.STRING_SET}
+SERIES = {AttributeType.FLOAT_SERIES, AttributeType.STRING_SERIES}
+
+SETS = {AttributeType.FILE_SET, AttributeType.STRING_SET}
 
 
-class Fetchable:
+class Fetchable(ABC):
     def __init__(
-        self, attribute: Attribute, backend: "NeptuneBackend", container_id: str, cache: Dict[str, Attr]
+        self,
+        attribute: Attribute,
+        backend: "NeptuneBackend",
+        container_id: str,
+        cache: Dict[str, Union[Attr, Series, Set]],
     ) -> None:
         self._attribute = attribute
         self._backend = backend
         self._container_id = container_id
         self._cache = cache
 
+    @abstractmethod
+    def fetch(self):
+        ...
+
+
+class FetchableAtom(Fetchable):
     def fetch(self):
         if self._attribute.path in self._cache:
             print("From cache")
@@ -71,15 +105,7 @@ class Fetchable:
         return attr.val
 
 
-class FetchableSeries:
-    def __init__(
-        self, attribute: Attribute, backend: "NeptuneBackend", container_id: str, cache: Dict[str, Union[Attr, Series]]
-    ) -> None:
-        self._attribute = attribute
-        self._backend = backend
-        self._container_id = container_id
-        self._cache = cache
-
+class FetchableSeries(Fetchable):
     def fetch(self):
         raise NeptuneUnsupportedType()
 
@@ -111,9 +137,26 @@ class FetchableSeries:
         return series.last
 
 
-def fetchable_or_fetchable_series(attribute: Attribute, *args, **kwargs) -> Union[Fetchable, FetchableSeries]:
+class FetchableSet(Fetchable):
+    def fetch(self):
+        if self._attribute.path in self._cache:
+            print("from cache")
+            return self._cache[self._attribute.path].values
+        if self._attribute.type == AttributeType.STRING_SET:
+            s = StringSet()
+        else:
+            raise NeptuneUnsupportedType()
+
+        s.values = s.fetch(self._backend, self._container_id, ContainerType.RUN, self._attribute.path)
+        self._cache[self._attribute.path] = s
+        return s.values
+
+
+def which_fetchable(attribute: Attribute, *args, **kwargs) -> Fetchable:
     if attribute.type in ATOMS:
-        return Fetchable(attribute, *args, **kwargs)
+        return FetchableAtom(attribute, *args, **kwargs)
     elif attribute.type in SERIES:
         return FetchableSeries(attribute, *args, **kwargs)
+    elif attribute in SETS:
+        return FetchableSet(attribute, *args, **kwargs)
     raise NeptuneUnsupportedType()
