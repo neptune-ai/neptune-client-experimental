@@ -237,6 +237,10 @@ class FrozenProject:
             # queryAttributeDefinitions
             # getAttributesWithPathsFilter
 
+        @property
+        def field_names(self) -> Generator[str, None, None]:
+            yield from self._structure
+
 
 if __name__ == "__main__":
     project = FrozenProject(workspace="aleksander.wojnarowicz", project="misc")
@@ -261,3 +265,4 @@ if __name__ == "__main__":
 
     ic(run["source_code/files"].download())
     ic(project.fetch_runs_table().to_pandas())
+    ic(list(run.field_names))
