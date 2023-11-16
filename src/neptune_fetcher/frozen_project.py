@@ -25,8 +25,16 @@ from typing import (
 
 from icecream import ic
 from neptune import Project
+from neptune.attributes import RunState
 from neptune.internal.backends.hosted_neptune_backend import HostedNeptuneBackend
-from neptune.internal.backends.nql import NQLEmptyQuery
+from neptune.internal.backends.nql import (
+    NQLAggregator,
+    NQLAttributeOperator,
+    NQLAttributeType,
+    NQLEmptyQuery,
+    NQLQueryAggregate,
+    NQLQueryAttribute,
+)
 from neptune.internal.backends.project_name_lookup import project_name_lookup
 from neptune.internal.container_type import ContainerType
 from neptune.internal.credentials import Credentials
@@ -58,6 +66,87 @@ def _get_attribute(entry: TableEntry, name: str) -> Optional[str]:
         return None
 
 
+def _prepare_nql_query(ids, states, owners, tags, trashed):
+    query_items = []
+
+    if trashed is not None:
+        query_items.append(
+            NQLQueryAttribute(
+                name="sys/trashed",
+                type=NQLAttributeType.BOOLEAN,
+                operator=NQLAttributeOperator.EQUALS,
+                value=trashed,
+            )
+        )
+
+    if ids:
+        query_items.append(
+            NQLQueryAggregate(
+                items=[
+                    NQLQueryAttribute(
+                        name="sys/id",
+                        type=NQLAttributeType.STRING,
+                        operator=NQLAttributeOperator.EQUALS,
+                        value=api_id,
+                    )
+                    for api_id in ids
+                ],
+                aggregator=NQLAggregator.OR,
+            )
+        )
+
+    if states:
+        query_items.append(
+            NQLQueryAggregate(
+                items=[
+                    NQLQueryAttribute(
+                        name="sys/state",
+                        type=NQLAttributeType.EXPERIMENT_STATE,
+                        operator=NQLAttributeOperator.EQUALS,
+                        value=RunState.from_string(state).to_api(),
+                    )
+                    for state in states
+                ],
+                aggregator=NQLAggregator.OR,
+            )
+        )
+
+    if owners:
+        query_items.append(
+            NQLQueryAggregate(
+                items=[
+                    NQLQueryAttribute(
+                        name="sys/owner",
+                        type=NQLAttributeType.STRING,
+                        operator=NQLAttributeOperator.EQUALS,
+                        value=owner,
+                    )
+                    for owner in owners
+                ],
+                aggregator=NQLAggregator.OR,
+            )
+        )
+
+    if tags:
+        query_items.append(
+            NQLQueryAggregate(
+                items=[
+                    NQLQueryAttribute(
+                        name="sys/tags",
+                        type=NQLAttributeType.STRING_SET,
+                        operator=NQLAttributeOperator.CONTAINS,
+                        value=tag,
+                    )
+                    for tag in tags
+                ],
+                aggregator=NQLAggregator.AND,
+            )
+        )
+
+    query = NQLQueryAggregate(items=query_items, aggregator=NQLAggregator.AND)
+    return query
+
+
 class FrozenProject:
     def __init__(
         self,
@@ -71,7 +160,6 @@ class FrozenProject:
             credentials=Credentials.from_token(api_token=api_token), proxies=proxies
         )
 
-        # TODO: Add workspace
         self.project_identifier = normalize_project_name(name=project, workspace=workspace)
         self._project_api_object: Project = project_name_lookup(backend=self._backend, name=self.project_identifier)
         self._project_id: UniqueId = self._project_api_object.id
@@ -97,6 +185,27 @@ class FrozenProject:
             yield FrozenProject.FrozenRun(
                 project=self, container_id=QualifiedName(f"{self.project_identifier}/{run_id}")
             )
+
+    def fetch_runs_table(self, columns=None, run_ids=None, states=None, owners=None, tags=None, trashed=False) -> Table:
+        query = _prepare_nql_query(run_ids, states, owners, tags, trashed)
+
+        if columns is not None:
+            # always return entries with `sys/id` column when filter applied
+            columns = set(columns)
+            columns.add("sys/id")
+
+        leaderboard_entries = self._backend.search_leaderboard_entries(
+            project_id=self._project_id,
+            types=[ContainerType.RUN],
+            query=query,
+            columns=columns,
+        )
+
+        return Table(
+            backend=self._backend,
+            container_type=ContainerType.RUN,
+            entries=leaderboard_entries,
+        )
 
     class FrozenRun:
         def __init__(self, project: "FrozenProject", container_id: QualifiedName) -> None:
@@ -126,6 +235,7 @@ class FrozenProject:
             del self._cache[key]
 
             # queryAttributeDefinitions
+            # getAttributesWithPathsFilter
 
 
 if __name__ == "__main__":
@@ -150,3 +260,4 @@ if __name__ == "__main__":
     ic(run["monitoring/9401b02f/cpu"].fetch_last())
 
     ic(run["source_code/files"].download())
+    ic(project.fetch_runs_table().to_pandas())
