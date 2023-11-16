@@ -148,3 +148,5 @@ if __name__ == "__main__":
     ic(run["monitoring/9401b02f/cpu"].fetch_values())
     ic(run["monitoring/9401b02f/cpu"].fetch_values())
     ic(run["monitoring/9401b02f/cpu"].fetch_last())
+
+    ic(run["source_code/files"].download())

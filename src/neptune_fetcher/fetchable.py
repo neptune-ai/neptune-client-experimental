@@ -21,6 +21,7 @@ from abc import (
 from typing import (
     TYPE_CHECKING,
     Dict,
+    Optional,
     Union,
 )
 
@@ -30,6 +31,7 @@ from neptune.internal.backends.api_model import (
     AttributeType,
 )
 from neptune.internal.container_type import ContainerType
+from neptune.internal.utils import verify_type
 
 from neptune_fetcher.attributes import (
     Attr,
@@ -61,8 +63,6 @@ ATOMS = {
     AttributeType.ARTIFACT,
 }
 SERIES = {AttributeType.FLOAT_SERIES, AttributeType.STRING_SERIES}
-
-SETS = {AttributeType.FILE_SET, AttributeType.STRING_SET}
 
 
 class Fetchable(ABC):
@@ -152,11 +152,40 @@ class FetchableSet(Fetchable):
         return s.values
 
 
+class Downloadable(Fetchable, ABC):
+    def fetch(self):
+        raise NeptuneUnsupportedType()
+
+    @abstractmethod
+    def download(self, destination: Optional[str] = None) -> None:
+        ...
+
+
+class DownloadableFile(Downloadable):
+    def download(self, destination: Optional[str] = None) -> None:
+        verify_type("destination", destination, (str, type(None)))
+        self._backend.download_file(self._container_id, ContainerType.RUN, [self._attribute.path], destination)
+
+    def fetch_extension(self) -> str:
+        val = self._backend.get_file_attribute(self._container_id, ContainerType.RUN, [self._attribute.path])
+        return val.ext
+
+
+class DownloadableSet(Downloadable):
+    def download(self, destination: Optional[str] = None) -> None:
+        verify_type("destination", destination, (str, type(None)))
+        self._backend.download_file_set(self._container_id, ContainerType.RUN, [self._attribute.path], destination)
+
+
 def which_fetchable(attribute: Attribute, *args, **kwargs) -> Fetchable:
     if attribute.type in ATOMS:
         return FetchableAtom(attribute, *args, **kwargs)
     elif attribute.type in SERIES:
         return FetchableSeries(attribute, *args, **kwargs)
-    elif attribute in SETS:
+    elif attribute.type == AttributeType.STRING_SET:
         return FetchableSet(attribute, *args, **kwargs)
+    elif attribute.type == AttributeType.FILE:
+        return DownloadableFile(attribute, *args, **kwargs)
+    elif attribute.type == AttributeType.FILE_SET:
+        return DownloadableSet(attribute, *args, **kwargs)
     raise NeptuneUnsupportedType()
