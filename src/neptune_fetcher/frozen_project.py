@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 from typing import (
-    TYPE_CHECKING,
     Dict,
     Generator,
     List,
@@ -23,10 +22,8 @@ from typing import (
     Union,
 )
 
-from icecream import ic
 from neptune import Project
 from neptune.attributes import RunState
-from neptune.internal.backends.hosted_neptune_backend import HostedNeptuneBackend
 from neptune.internal.backends.nql import (
     NQLAggregator,
     NQLAttributeOperator,
@@ -48,15 +45,13 @@ from neptune.metadata_containers.metadata_containers_table import (
     TableEntry,
 )
 
+from neptune_fetcher.custom_backend import CustomBackend
 from neptune_fetcher.fetchable import (
     Fetchable,
     which_fetchable,
 )
 
 T = TypeVar("T")
-
-if TYPE_CHECKING:
-    from neptune.internal.backends.neptune_backend import NeptuneBackend
 
 
 def _get_attribute(entry: TableEntry, name: str) -> Optional[str]:
@@ -156,7 +151,7 @@ class FrozenProject:
         proxies: Optional[dict] = None,
     ) -> None:
         self._project: Optional[str] = project
-        self._backend: NeptuneBackend = HostedNeptuneBackend(
+        self._backend: CustomBackend = CustomBackend(
             credentials=Credentials.from_token(api_token=api_token), proxies=proxies
         )
 
@@ -180,14 +175,17 @@ class FrozenProject:
                 "sys/name": _get_attribute(entry=row, name="sys/name"),
             }
 
-    def fetch_runs(self, with_ids: List[str]) -> Generator["FrozenProject.FrozenRun", None, None]:
+    def fetch_frozen_runs(self, with_ids: List[str]) -> Generator["FrozenProject.FrozenRun", None, None]:
         for run_id in with_ids:
             yield FrozenProject.FrozenRun(
                 project=self, container_id=QualifiedName(f"{self.project_identifier}/{run_id}")
             )
 
-    def fetch_runs_table(self, columns=None, run_ids=None, states=None, owners=None, tags=None, trashed=False) -> Table:
-        query = _prepare_nql_query(run_ids, states, owners, tags, trashed)
+    def fetch_runs(self):
+        return self.fetch_runs_df(columns=["sys/id", "sys/name"])
+
+    def fetch_runs_df(self, columns=None, with_ids=None, states=None, owners=None, tags=None, trashed=False):
+        query = _prepare_nql_query(with_ids, states, owners, tags, trashed)
 
         if columns is not None:
             # always return entries with `sys/id` column when filter applied
@@ -205,7 +203,7 @@ class FrozenProject:
             backend=self._backend,
             container_type=ContainerType.RUN,
             entries=leaderboard_entries,
-        )
+        ).to_pandas()
 
     class FrozenRun:
         def __init__(self, project: "FrozenProject", container_id: QualifiedName) -> None:
@@ -241,28 +239,33 @@ class FrozenProject:
         def field_names(self) -> Generator[str, None, None]:
             yield from self._structure
 
+        def prefetch(self, paths: List[str]) -> None:
+            fetched = self.project._backend.prefetch_values(self._container_id, ContainerType.RUN, paths)
+            self._cache.update(fetched)
+
 
 if __name__ == "__main__":
-    project = FrozenProject(workspace="aleksander.wojnarowicz", project="misc")
+    project = FrozenProject(workspace="administrator")
+
     ids = list(map(lambda row: row["sys/id"], project.list_runs()))
 
-    run = next(project.fetch_runs(["MIS-1419"]))
-
-    ic(run["sys/id"].fetch())
-    ic(run["sys/owner"].fetch())
-    ic(run["sys/owner"].fetch())
-    ic(run._cache)
-    del run["sys/owner"]
-    ic(run._cache)
-    ic(run["sys/owner"].fetch())
-    ic(run["sys/failed"].fetch())
-    ic(run["sys/creation_time"].fetch())
-    ic(run["sys/monitoring_time"].fetch())
-    ic(run._cache)
-    ic(run["monitoring/9401b02f/cpu"].fetch_values())
-    ic(run["monitoring/9401b02f/cpu"].fetch_values())
-    ic(run["monitoring/9401b02f/cpu"].fetch_last())
-
-    ic(run["source_code/files"].download())
-    ic(project.fetch_runs_table().to_pandas())
-    ic(list(run.field_names))
+    run = next(project.fetch_frozen_runs(["AL-5018"]))
+    run.prefetch(["sys/id", "source_code/entrypoint"])
+    # ic(run["sys/id"].fetch())
+    # ic(run["sys/owner"].fetch())
+    # ic(run["sys/owner"].fetch())
+    # ic(run._cache)
+    # del run["sys/owner"]
+    # ic(run._cache)
+    # ic(run["sys/owner"].fetch())
+    # ic(run["sys/failed"].fetch())
+    # ic(run["sys/creation_time"].fetch())
+    # ic(run["sys/monitoring_time"].fetch())
+    # ic(run._cache)
+    # # ic(run["monitoring/9401b02f/cpu"].fetch_values())
+    # # ic(run["monitoring/9401b02f/cpu"].fetch_values())
+    # # ic(run["monitoring/9401b02f/cpu"].fetch_last())
+    #
+    # ic(run["source_code/files"].download())
+    # ic(project.fetch_runs_table().to_pandas())
+    # ic(list(run.field_names))
