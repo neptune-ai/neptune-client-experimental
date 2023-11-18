@@ -17,13 +17,13 @@ import logging
 import os
 import shutil
 import threading
-from queue import Queue
 from datetime import datetime
+from queue import Queue
 from typing import (
+    TYPE_CHECKING,
     Any,
     List,
     Optional,
-    TYPE_CHECKING,
 )
 
 from neptune.constants import ASYNC_DIRECTORY
