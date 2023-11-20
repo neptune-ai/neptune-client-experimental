@@ -75,8 +75,8 @@ from neptune_fetcher import FrozenProject
 project = FrozenProject(workspace="some", project="project")
 df = project.fetch_runs_df()
 
-matches = df['sys/name'].str.match('metrics.*')
-ids = df[matches]['sys/id']
+matches = df["sys/name"].str.match("metrics.*")
+ids = df[matches]["sys/id"]
 ```
 
 ### Iterating Over Runs
@@ -87,28 +87,28 @@ from neptune_fetcher import FrozenProject
 project = FrozenProject(workspace="some", project="project")
 for run in project.fetch_frozen_runs(with_ids=["PROJ-2"]):
     for field in run.field_names:
-        if field.startswith('param'):
+        if field.startswith("param"):
             print(run[field].fetch())
-        if field.startswith('metric'):
+        if field.startswith("metric"):
             print(run[field].fetch_values())
 ```
 
 ### Prefetching Values
 
 ```python
-run.prefetch(['metric1', 'metric2'])
-print(run['metric1'].fetch(), run['metric2'].fetch()) # This will use the local cache
+run.prefetch(["metric1", "metric2"])
+print(run["metric1"].fetch(), run["metric2"].fetch())  # This will use the local cache
 ```
 
 ### Purging Local Cache
 
 ```python
-del run['metric1']
+del run["metric1"]
 ```
 
 ### Custom Progress Indicator
 
-Use default progress indicator:
+Use the default progress indicator:
 
 ```python
 from neptune_fetcher import FrozenProject
@@ -129,20 +129,20 @@ class MyProgressIndicator(ProgressUpdateHandler):
         pass
 
     def on_run_table_fetch(self, step: int):
-        print(f'Fetching run table, step {step}')
+        print(f"Fetching runs table, step {step}")
 
     def post_table_fetch(self):
         pass
 
-project = FrozenProject('some/project')
+project = FrozenProject("some/project")
 project.progress_indicator(MyProgressIndicator())
 df = project.fetch_runs_df()
 ```
 Output:
 ```text
-Fetching run table, step 100
-Fetching run table, step 100
-Fetching run table, step 100
+Fetching runs table, step 100
+Fetching runs table, step 100
+Fetching runs table, step 100
 ```
 
 ## License
