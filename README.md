@@ -34,7 +34,7 @@ from neptune_fetcher import (
         - `progress_indicator(handler: Union[ProgressUpdateHandler, bool])`: Sets a progress indicator.
         - `fetch_runs_df(columns, with_ids, states, owners, tags, trashed)`: Fetches runs as a DataFrame based on specified filters.
 
-- _`FrozenProject.FrozenRun`_: Represents a single run within a project with read-only access.
+- _`FrozenProject.FrozenRun`_: Represents a single Neptune run with read-only access.
     - _Methods_:
         - `__getitem__(item)`: Accesses a field by its path.
         - `__delitem__(key)`: Removes a field from the local cache.
