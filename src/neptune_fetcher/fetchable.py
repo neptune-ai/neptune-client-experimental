@@ -24,12 +24,14 @@ __all__ = [
     "DownloadableSet",
 ]
 
+import typing
 from abc import (
     ABC,
     abstractmethod,
 )
 from typing import (
     TYPE_CHECKING,
+    Any,
     Dict,
     Optional,
     Union,
@@ -58,6 +60,8 @@ from neptune_fetcher.attributes import (
 )
 
 if TYPE_CHECKING:
+    from pandas import DataFrame
+
     from neptune_fetcher.custom_backend import CustomBackend
 
 
@@ -119,7 +123,7 @@ class FetchableSeries(Fetchable):
     def fetch(self):
         raise NeptuneUnsupportedType()
 
-    def fetch_values(self, *, include_timestamp: bool = True):
+    def fetch_values(self, *, include_timestamp: bool = True) -> "DataFrame":
         if self._attribute.path in self._cache:
             # from cache
             return self._cache[self._attribute.path].values
@@ -135,7 +139,7 @@ class FetchableSeries(Fetchable):
         self._cache[self._attribute.path] = series
         return series.values
 
-    def fetch_last(self):
+    def fetch_last(self) -> Union[str, float]:
         if self._attribute.type == AttributeType.FLOAT_SERIES:
             series = FloatSeries()
         elif self._attribute.type == AttributeType.STRING_SERIES:
@@ -148,7 +152,7 @@ class FetchableSeries(Fetchable):
 
 
 class FetchableSet(Fetchable):
-    def fetch(self):
+    def fetch(self) -> typing.Set[str]:
         if self._attribute.path in self._cache:
             # from cache
             return self._cache[self._attribute.path].values
@@ -187,7 +191,7 @@ class DownloadableSet(Downloadable):
         self._backend.download_file_set(self._container_id, ContainerType.RUN, [self._attribute.path], destination)
 
 
-def which_fetchable(attribute: Attribute, *args, **kwargs) -> Fetchable:
+def which_fetchable(attribute: Attribute, *args: Any, **kwargs: Any) -> Fetchable:
     if attribute.type in ATOMS:
         return FetchableAtom(attribute, *args, **kwargs)
     elif attribute.type in SERIES:
