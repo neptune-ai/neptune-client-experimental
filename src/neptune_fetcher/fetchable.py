@@ -48,7 +48,7 @@ from neptune_fetcher.attributes import (
 )
 
 if TYPE_CHECKING:
-    from neptune.internal.backends.neptune_backend import NeptuneBackend
+    from neptune_fetcher.custom_backend import CustomBackend
 
 
 ATOMS = {
@@ -69,7 +69,7 @@ class Fetchable(ABC):
     def __init__(
         self,
         attribute: Attribute,
-        backend: "NeptuneBackend",
+        backend: "CustomBackend",
         container_id: str,
         cache: Dict[str, Union[Attr, Series, Set]],
     ) -> None:
@@ -86,7 +86,7 @@ class Fetchable(ABC):
 class FetchableAtom(Fetchable):
     def fetch(self):
         if self._attribute.path in self._cache:
-            print("From cache")
+            # from cache
             return self._cache[self._attribute.path].val
         if self._attribute.type == AttributeType.STRING:
             attr = String(self._attribute.type)
@@ -111,7 +111,7 @@ class FetchableSeries(Fetchable):
 
     def fetch_values(self, *, include_timestamp: bool = True):
         if self._attribute.path in self._cache:
-            print("from cache")
+            # from cache
             return self._cache[self._attribute.path].values
         if self._attribute.type == AttributeType.FLOAT_SERIES:
             series = FloatSeries()
@@ -140,7 +140,7 @@ class FetchableSeries(Fetchable):
 class FetchableSet(Fetchable):
     def fetch(self):
         if self._attribute.path in self._cache:
-            print("from cache")
+            # from cache
             return self._cache[self._attribute.path].values
         if self._attribute.type == AttributeType.STRING_SET:
             s = StringSet()
@@ -154,7 +154,7 @@ class FetchableSet(Fetchable):
 
 class Downloadable(Fetchable, ABC):
     def fetch(self):
-        raise NeptuneUnsupportedType()
+        raise NeptuneUnsupportedType("Files and FileSets do not support `fetch` operation")
 
     @abstractmethod
     def download(self, destination: Optional[str] = None) -> None:
@@ -188,4 +188,4 @@ def which_fetchable(attribute: Attribute, *args, **kwargs) -> Fetchable:
         return DownloadableFile(attribute, *args, **kwargs)
     elif attribute.type == AttributeType.FILE_SET:
         return DownloadableSet(attribute, *args, **kwargs)
-    raise NeptuneUnsupportedType()
+    raise NeptuneUnsupportedType(f"Unsupported type: {attribute.type}")

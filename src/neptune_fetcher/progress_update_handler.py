@@ -65,7 +65,7 @@ class DefaultProgressUpdateHandler(ProgressUpdateHandler):
 
     def on_run_table_fetch(self, step: int) -> None:
         self._table_bar.update(n=step)
-        self._table_bar.set_description("Fetching runs dataframe")
+        self._table_bar.set_description("Fetching runs")
 
     def post_table_fetch(self) -> None:
         self._table_bar.close()

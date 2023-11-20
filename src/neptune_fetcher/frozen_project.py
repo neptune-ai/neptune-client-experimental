@@ -22,7 +22,6 @@ from typing import (
     Union,
 )
 
-from icecream import ic
 from neptune import Project
 from neptune.internal.backends.nql import NQLEmptyQuery
 from neptune.internal.backends.project_name_lookup import project_name_lookup
@@ -41,7 +40,9 @@ from neptune.metadata_containers.utils import prepare_nql_query
 
 from neptune_fetcher.custom_backend import CustomBackend
 from neptune_fetcher.fetchable import (
+    Downloadable,
     Fetchable,
+    FetchableSeries,
     which_fetchable,
 )
 from neptune_fetcher.progress_update_handler import (
@@ -144,7 +145,7 @@ class FrozenProject:
                 for attribute in self.project._backend.get_attributes(self._container_id, ContainerType.RUN)
             }
 
-        def __getitem__(self, item) -> Union[Fetchable]:
+        def __getitem__(self, item) -> Union[Fetchable, FetchableSeries, Downloadable]:
             return self._structure[item]
 
         def __delitem__(self, key: str) -> None:
@@ -157,33 +158,3 @@ class FrozenProject:
         def prefetch(self, paths: List[str]) -> None:
             fetched = self.project._backend.prefetch_values(self._container_id, ContainerType.RUN, paths)
             self._cache.update(fetched)
-
-
-if __name__ == "__main__":
-    project = FrozenProject(workspace="administrator", project="Aleksander-benchmark", api_token="")
-    project.progress_indicator(True)
-    # ids = list(map(lambda row: row["sys/id"], project.list_runs()))
-
-    run = next(project.fetch_frozen_runs(["AL-5017"]))
-    # run.prefetch(["sys/id", "source_code/entrypoint"])
-    # print(run._cache)
-    # ic(run["sys/id"].fetch())
-    # ic(run["sys/owner"].fetch())
-    # ic(run["sys/owner"].fetch())
-    # ic(run._cache)
-    # del run["sys/owner"]
-    # ic(run._cache)
-    # ic(run["sys/owner"].fetch())
-    # ic(run["sys/failed"].fetch())
-    # ic(run["sys/creation_time"].fetch())
-    # ic(run["sys/monitoring_time"].fetch())
-    # ic(run._cache)
-    # run.prefetch(["charts/chart-0"])
-    ic(run["charts/chart-0"].fetch_values())
-    # ic(run._cache)
-    # ic(run["monitoring/81f175c0/cpu"].fetch_values())
-    # # ic(run["monitoring/9401b02f/cpu"].fetch_last())
-    #
-    # ic(run["source_code/files"].download())
-    ic(project.fetch_runs_df())
-    # ic(list(run.field_names))

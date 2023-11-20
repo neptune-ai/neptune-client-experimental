@@ -37,6 +37,9 @@ from neptune.internal.container_type import ContainerType
 from neptune_fetcher.attributes import (
     Attr,
     Boolean,
+    Datetime,
+    Float,
+    Integer,
     String,
 )
 from neptune_fetcher.progress_update_handler import (
@@ -54,12 +57,19 @@ def get_attribute_from_dto(dto: Any) -> Attr:
         return String(AttributeType(dto.type), dto.stringProperties.value)
     if dto.boolProperties is not None:
         return Boolean(AttributeType(dto.type), dto.boolProperties.value)
+    if dto.floatProperties is not None:
+        return Float(AttributeType(dto.type), dto.floatProperties.value)
+    if dto.intProperties is not None:
+        return Integer(AttributeType(dto.type), dto.intProperties.value)
+    if dto.datetimeProperties is not None:
+        return Datetime(AttributeType(dto.type), dto.datetimeProperties.value)
+    raise Exception(f"Attribute {dto.name} of type {AttributeType(dto.type)} does not support prefetching")
 
 
 class CustomBackend(HostedNeptuneBackend):
     def __init__(self, *args: Any, progress_update_handler: Optional[ProgressUpdateHandler] = None, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self.progress_update_handler = (
+        self.progress_update_handler: ProgressUpdateHandler = (
             progress_update_handler if progress_update_handler else NullProgressUpdateHandler()
         )
 
