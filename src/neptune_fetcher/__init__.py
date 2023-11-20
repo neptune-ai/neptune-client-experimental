@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-__all__ = ["FrozenProject"]
+__all__ = [
+    "FrozenProject",
+    "ProgressUpdateHandler",
+]
 
-from neptune_fetcher.frozen_project import FrozenProject
+from .frozen_project import FrozenProject
+from .progress_update_handler import ProgressUpdateHandler
