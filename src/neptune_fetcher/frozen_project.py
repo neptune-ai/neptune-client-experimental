@@ -13,9 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+__all__ = [
+    "FrozenProject",
+]
+
 from typing import (
+    TYPE_CHECKING,
     Dict,
     Generator,
+    Iterable,
     List,
     Optional,
     TypeVar,
@@ -47,8 +53,12 @@ from neptune_fetcher.fetchable import (
 )
 from neptune_fetcher.progress_update_handler import (
     DefaultProgressUpdateHandler,
+    NullProgressUpdateHandler,
     ProgressUpdateHandler,
 )
+
+if TYPE_CHECKING:
+    from pandas import DataFrame
 
 T = TypeVar("T")
 
@@ -99,17 +109,28 @@ class FrozenProject:
                 project=self, container_id=QualifiedName(f"{self.project_identifier}/{run_id}")
             )
 
-    def fetch_runs(self):
+    def fetch_runs(self) -> "DataFrame":
         return self.fetch_runs_df(columns=["sys/id", "sys/name"])
 
-    def progress_indicator(self, handler: Union[ProgressUpdateHandler, bool]):
+    def progress_indicator(self, handler: Union[ProgressUpdateHandler, bool]) -> None:
         if isinstance(handler, bool):
             if handler:
                 self._backend.progress_update_handler = DefaultProgressUpdateHandler()
+            else:
+                # reset
+                self._backend.progress_update_handler = NullProgressUpdateHandler()
         else:
             self._backend.progress_update_handler = handler
 
-    def fetch_runs_df(self, columns=None, with_ids=None, states=None, owners=None, tags=None, trashed=False):
+    def fetch_runs_df(
+        self,
+        columns: Optional[Iterable[str]] = None,
+        with_ids: Optional[Iterable[str]] = None,
+        states: Optional[Iterable[str]] = None,
+        owners: Optional[Iterable[str]] = None,
+        tags: Optional[Iterable[str]] = None,
+        trashed: Optional[bool] = False,
+    ) -> "DataFrame":
         query = prepare_nql_query(with_ids, states, owners, tags, trashed)
 
         if columns is not None:
@@ -145,7 +166,7 @@ class FrozenProject:
                 for attribute in self.project._backend.get_attributes(self._container_id, ContainerType.RUN)
             }
 
-        def __getitem__(self, item) -> Union[Fetchable, FetchableSeries, Downloadable]:
+        def __getitem__(self, item: str) -> Union[Fetchable, FetchableSeries, Downloadable]:
             return self._structure[item]
 
         def __delitem__(self, key: str) -> None:

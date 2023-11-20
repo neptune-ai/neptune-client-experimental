@@ -13,6 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+__all__ = [
+    "Attr",
+    "Boolean",
+    "Datetime",
+    "Float",
+    "FloatSeries",
+    "Integer",
+    "Set",
+    "Series",
+    "String",
+    "StringSeries",
+    "StringSet",
+]
 
 import typing
 from abc import ABC
@@ -35,9 +48,13 @@ from neptune.attributes.series.fetchable_series import Row
 from neptune.internal.backends.api_model import (
     AttributeType,
     FloatSeriesValues,
+    StringSeriesValues,
 )
+from neptune.internal.container_type import ContainerType
 
 if typing.TYPE_CHECKING:
+    from pandas import DataFrame
+
     from neptune_fetcher.custom_backend import CustomBackend
 
 T = TypeVar("T")
@@ -45,7 +62,7 @@ T = TypeVar("T")
 
 @dataclass
 class Set(Generic[T], ABC):
-    values: Optional = None
+    values: Optional[typing.Set[T]] = None
 
     @staticmethod
     def fetch(backend, container_id, container_type, path) -> typing.Set[T]:
@@ -59,11 +76,18 @@ class StringSet(Set[str]):
 
 
 @dataclass
-class Series(ABC):
-    values: Optional = None
-    last: Optional = None
+class Series(ABC, Generic[T]):
+    values: Optional["DataFrame"] = None
+    last: Optional[T] = None
 
-    def fetch_values(self, backend: "CustomBackend", container_id, container_type, path, include_timestamp=True):
+    def fetch_values(
+        self,
+        backend: "CustomBackend",
+        container_id: str,
+        container_type: ContainerType,
+        path: typing.List[str],
+        include_timestamp: bool = True,
+    ) -> "DataFrame":
         import pandas as pd
 
         limit = 100
@@ -93,32 +117,53 @@ class Series(ABC):
         return df
 
     @staticmethod
-    def _fetch_values_from_backend(backend, container_id, container_type, path, offset, limit) -> Row:
+    def _fetch_values_from_backend(
+        backend: "CustomBackend",
+        container_id: str,
+        container_type: ContainerType,
+        path: typing.List[str],
+        offset: int,
+        limit: int,
+    ) -> Row:
         ...
 
     @staticmethod
-    def fetch_last(backend, container_id, container_type, path):
+    def fetch_last(backend: "CustomBackend", container_id: str, container_type: ContainerType, path: str) -> T:
         ...
 
 
-class FloatSeries(Series):
+class FloatSeries(Series[float]):
     @staticmethod
-    def _fetch_values_from_backend(backend, container_id, container_type, path, offset, limit) -> FloatSeriesValues:
+    def _fetch_values_from_backend(
+        backend: "CustomBackend",
+        container_id: str,
+        container_type: ContainerType,
+        path: typing.List[str],
+        offset: int,
+        limit: int,
+    ) -> FloatSeriesValues:
         return backend.get_float_series_values(container_id, container_type, path, offset, limit)
 
     @staticmethod
-    def fetch_last(backend, container_id, container_type, path):
+    def fetch_last(backend: "CustomBackend", container_id: str, container_type: ContainerType, path: str) -> float:
         return backend.get_float_series_attribute(container_id, container_type, [path]).last
 
 
-class StringSeries(Series):
+class StringSeries(Series[str]):
     @staticmethod
-    def _fetch_values_from_backend(backend, container_id, container_type, path, offset, limit) -> Row:
+    def _fetch_values_from_backend(
+        backend: "CustomBackend",
+        container_id: str,
+        container_type: ContainerType,
+        path: typing.List[str],
+        offset: int,
+        limit: int,
+    ) -> StringSeriesValues:
         return backend.get_string_series_values(container_id, container_type, path, offset, limit)
 
     @staticmethod
-    def fetch_last(backend, container_id, container_type, path) -> str:
-        return backend.get_string_series_attribute(container_id, container_type, path).last
+    def fetch_last(backend: "CustomBackend", container_id: str, container_type: ContainerType, path: str) -> str:
+        return backend.get_string_series_attribute(container_id, container_type, [path]).last
 
 
 @dataclass
@@ -127,13 +172,15 @@ class Attr(Generic[T], ABC):
     val: Optional[T] = None
 
     @staticmethod
-    def fetch(backend, container_id, container_type, path) -> T:
+    def fetch(backend: "CustomBackend", container_id: str, container_type: ContainerType, path: typing.List[str]) -> T:
         ...
 
 
 class Integer(Attr[int]):
     @staticmethod
-    def fetch(backend, container_id, container_type, path) -> int:
+    def fetch(
+        backend: "CustomBackend", container_id: str, container_type: ContainerType, path: typing.List[str]
+    ) -> int:
         return IntegerAttr.getter(
             backend=backend,
             container_id=container_id,
@@ -144,7 +191,9 @@ class Integer(Attr[int]):
 
 class Float(Attr[float]):
     @staticmethod
-    def fetch(backend, container_id, container_type, path) -> float:
+    def fetch(
+        backend: "CustomBackend", container_id: str, container_type: ContainerType, path: typing.List[str]
+    ) -> float:
         return FloatAttr.getter(
             backend=backend,
             container_id=container_id,
@@ -155,7 +204,9 @@ class Float(Attr[float]):
 
 class String(Attr[str]):
     @staticmethod
-    def fetch(backend, container_id, container_type, path) -> str:
+    def fetch(
+        backend: "CustomBackend", container_id: str, container_type: ContainerType, path: typing.List[str]
+    ) -> str:
         return StringAttr.getter(
             backend=backend,
             container_id=container_id,
@@ -166,7 +217,9 @@ class String(Attr[str]):
 
 class Boolean(Attr[bool]):
     @staticmethod
-    def fetch(backend, container_id, container_type, path) -> bool:
+    def fetch(
+        backend: "CustomBackend", container_id: str, container_type: ContainerType, path: typing.List[str]
+    ) -> bool:
         return BooleanAttr.getter(
             backend=backend,
             container_id=container_id,
@@ -177,7 +230,9 @@ class Boolean(Attr[bool]):
 
 class Datetime(Attr[datetime]):
     @staticmethod
-    def fetch(backend, container_id, container_type, path) -> datetime:
+    def fetch(
+        backend: "CustomBackend", container_id: str, container_type: ContainerType, path: typing.List[str]
+    ) -> datetime:
         return DatetimeAttr.getter(
             backend=backend,
             container_id=container_id,

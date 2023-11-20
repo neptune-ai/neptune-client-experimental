@@ -1,4 +1,4 @@
-from neptune_fetcher.frozen_project import FrozenProject
+from neptune_fetcher import FrozenProject
 
 
 def main():
