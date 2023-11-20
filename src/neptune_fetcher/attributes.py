@@ -37,6 +37,9 @@ from neptune.internal.backends.api_model import (
     FloatSeriesValues,
 )
 
+if typing.TYPE_CHECKING:
+    from neptune_fetcher.custom_backend import CustomBackend
+
 T = TypeVar("T")
 
 
@@ -60,10 +63,10 @@ class Series(ABC):
     values: Optional = None
     last: Optional = None
 
-    def fetch_values(self, backend, container_id, container_type, path, include_timestamp=True):
+    def fetch_values(self, backend: "CustomBackend", container_id, container_type, path, include_timestamp=True):
         import pandas as pd
 
-        limit = 1000
+        limit = 100
         val = self._fetch_values_from_backend(backend, container_id, container_type, path, 0, limit)
         data = val.values
         offset = limit
@@ -76,10 +79,13 @@ class Series(ABC):
                 row["timestamp"] = datetime.fromtimestamp(entry.timestampMillis / 1000)
             return row
 
+        backend.progress_update_handler.series_setup(val.totalItemCount, limit)
         while offset < val.totalItemCount:
             batch = self._fetch_values_from_backend(backend, container_id, container_type, path, offset, limit)
             data.extend(batch.values)
             offset += limit
+            backend.progress_update_handler.on_series_fetch(limit)
+        backend.progress_update_handler.post_series_fetch()
 
         rows = dict((n, make_row(entry)) for (n, entry) in enumerate(data))
 

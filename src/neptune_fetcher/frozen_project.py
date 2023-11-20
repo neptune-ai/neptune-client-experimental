@@ -22,16 +22,9 @@ from typing import (
     Union,
 )
 
+from icecream import ic
 from neptune import Project
-from neptune.attributes import RunState
-from neptune.internal.backends.nql import (
-    NQLAggregator,
-    NQLAttributeOperator,
-    NQLAttributeType,
-    NQLEmptyQuery,
-    NQLQueryAggregate,
-    NQLQueryAttribute,
-)
+from neptune.internal.backends.nql import NQLEmptyQuery
 from neptune.internal.backends.project_name_lookup import project_name_lookup
 from neptune.internal.container_type import ContainerType
 from neptune.internal.credentials import Credentials
@@ -44,12 +37,14 @@ from neptune.metadata_containers.metadata_containers_table import (
     Table,
     TableEntry,
 )
+from neptune.metadata_containers.utils import prepare_nql_query
 
 from neptune_fetcher.custom_backend import CustomBackend
 from neptune_fetcher.fetchable import (
     Fetchable,
     which_fetchable,
 )
+from neptune_fetcher.progress_update_handler import ProgressUpdateHandler
 
 T = TypeVar("T")
 
@@ -59,87 +54,6 @@ def _get_attribute(entry: TableEntry, name: str) -> Optional[str]:
         return entry.get_attribute_value(name)
     except ValueError:
         return None
-
-
-def _prepare_nql_query(ids, states, owners, tags, trashed):
-    query_items = []
-
-    if trashed is not None:
-        query_items.append(
-            NQLQueryAttribute(
-                name="sys/trashed",
-                type=NQLAttributeType.BOOLEAN,
-                operator=NQLAttributeOperator.EQUALS,
-                value=trashed,
-            )
-        )
-
-    if ids:
-        query_items.append(
-            NQLQueryAggregate(
-                items=[
-                    NQLQueryAttribute(
-                        name="sys/id",
-                        type=NQLAttributeType.STRING,
-                        operator=NQLAttributeOperator.EQUALS,
-                        value=api_id,
-                    )
-                    for api_id in ids
-                ],
-                aggregator=NQLAggregator.OR,
-            )
-        )
-
-    if states:
-        query_items.append(
-            NQLQueryAggregate(
-                items=[
-                    NQLQueryAttribute(
-                        name="sys/state",
-                        type=NQLAttributeType.EXPERIMENT_STATE,
-                        operator=NQLAttributeOperator.EQUALS,
-                        value=RunState.from_string(state).to_api(),
-                    )
-                    for state in states
-                ],
-                aggregator=NQLAggregator.OR,
-            )
-        )
-
-    if owners:
-        query_items.append(
-            NQLQueryAggregate(
-                items=[
-                    NQLQueryAttribute(
-                        name="sys/owner",
-                        type=NQLAttributeType.STRING,
-                        operator=NQLAttributeOperator.EQUALS,
-                        value=owner,
-                    )
-                    for owner in owners
-                ],
-                aggregator=NQLAggregator.OR,
-            )
-        )
-
-    if tags:
-        query_items.append(
-            NQLQueryAggregate(
-                items=[
-                    NQLQueryAttribute(
-                        name="sys/tags",
-                        type=NQLAttributeType.STRING_SET,
-                        operator=NQLAttributeOperator.CONTAINS,
-                        value=tag,
-                    )
-                    for tag in tags
-                ],
-                aggregator=NQLAggregator.AND,
-            )
-        )
-
-    query = NQLQueryAggregate(items=query_items, aggregator=NQLAggregator.AND)
-    return query
 
 
 class FrozenProject:
@@ -184,8 +98,14 @@ class FrozenProject:
     def fetch_runs(self):
         return self.fetch_runs_df(columns=["sys/id", "sys/name"])
 
+    def progress_indicator(self, handler: Union[ProgressUpdateHandler, bool]):
+        if isinstance(handler, bool) and handler:
+            self._backend.progress_update_handler = ProgressUpdateHandler()
+        else:
+            self._backend.progress_update_handler = handler
+
     def fetch_runs_df(self, columns=None, with_ids=None, states=None, owners=None, tags=None, trashed=False):
-        query = _prepare_nql_query(with_ids, states, owners, tags, trashed)
+        query = prepare_nql_query(with_ids, states, owners, tags, trashed)
 
         if columns is not None:
             # always return entries with `sys/id` column when filter applied
@@ -245,12 +165,13 @@ class FrozenProject:
 
 
 if __name__ == "__main__":
-    project = FrozenProject(workspace="administrator")
+    project = FrozenProject(workspace="administrator", project="Aleksander-benchmark", api_token="")
+    project.progress_indicator(True)
+    # ids = list(map(lambda row: row["sys/id"], project.list_runs()))
 
-    ids = list(map(lambda row: row["sys/id"], project.list_runs()))
-
-    run = next(project.fetch_frozen_runs(["AL-5018"]))
-    run.prefetch(["sys/id", "source_code/entrypoint"])
+    run = next(project.fetch_frozen_runs(["AL-5017"]))
+    # run.prefetch(["sys/id", "source_code/entrypoint"])
+    # print(run._cache)
     # ic(run["sys/id"].fetch())
     # ic(run["sys/owner"].fetch())
     # ic(run["sys/owner"].fetch())
@@ -262,10 +183,12 @@ if __name__ == "__main__":
     # ic(run["sys/creation_time"].fetch())
     # ic(run["sys/monitoring_time"].fetch())
     # ic(run._cache)
-    # # ic(run["monitoring/9401b02f/cpu"].fetch_values())
-    # # ic(run["monitoring/9401b02f/cpu"].fetch_values())
+    # run.prefetch(["charts/chart-0"])
+    ic(run["charts/chart-0"].fetch_values())
+    # ic(run._cache)
+    # ic(run["monitoring/81f175c0/cpu"].fetch_values())
     # # ic(run["monitoring/9401b02f/cpu"].fetch_last())
     #
     # ic(run["source_code/files"].download())
-    # ic(project.fetch_runs_table().to_pandas())
+    ic(project.fetch_runs_df())
     # ic(list(run.field_names))

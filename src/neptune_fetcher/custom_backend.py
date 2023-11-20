@@ -1,7 +1,24 @@
+#
+# Copyright (c) 2023, Neptune Labs Sp. z o.o.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 from typing import (
     Any,
     Dict,
     List,
+    Optional,
 )
 
 from bravado.exception import HTTPNotFound
@@ -19,8 +36,10 @@ from neptune.internal.container_type import ContainerType
 
 from neptune_fetcher.attributes import (
     Attr,
+    Boolean,
     String,
 )
+from neptune_fetcher.progress_update_handler import ProgressUpdateHandler
 
 
 def to_attribute(attr) -> Attribute:
@@ -30,9 +49,15 @@ def to_attribute(attr) -> Attribute:
 def get_attribute_from_dto(dto: Any) -> Attr:
     if dto.stringProperties is not None:
         return String(AttributeType(dto.type), dto.stringProperties.value)
+    if dto.boolProperties is not None:
+        return Boolean(AttributeType(dto.type), dto.boolProperties.value)
 
 
 class CustomBackend(HostedNeptuneBackend):
+    def __init__(self, *args: Any, progress_update_handler: Optional[ProgressUpdateHandler] = None, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self.progress_update_handler = progress_update_handler
+
     def get_attributes(self, container_id: str, container_type: ContainerType) -> List[Attribute]:
         params = {
             "experimentIdentifier": container_id,
@@ -80,3 +105,16 @@ class CustomBackend(HostedNeptuneBackend):
             ) from e
 
         return {dto.name: get_attribute_from_dto(dto) for dto in result.attributes}
+
+    def _get_all_items(self, get_portion, step):
+        max_server_offset = 10000
+        items = []
+        previous_items = None
+        self.progress_update_handler.table_setup()
+        while (previous_items is None or len(previous_items) >= step) and len(items) < max_server_offset:
+            previous_items = get_portion(limit=step, offset=len(items))
+            items += previous_items
+            # We don't know the size apriori
+            self.progress_update_handler.on_run_table_fetch(step)
+        self.progress_update_handler.post_table_fetch()
+        return items
