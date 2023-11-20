@@ -1,3 +1,9 @@
+## neptune-experimental 0.2.0
+
+### Features
+- Added fetching API ([#19](https://github.com/neptune-ai/neptune-client-experimental/pull/19))
+
+
 ## neptune-experimental 0.1.0
 
 ### Features
