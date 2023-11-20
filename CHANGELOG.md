@@ -1,9 +1,3 @@
-## neptune-experimental 0.2.1
-
-### Changes
-- Removed `example.py` script ([#23](https://github.com/neptune-ai/neptune-client-experimental/pull/23))
-
-
 ## neptune-experimental 0.2.0
 
 ### Features
