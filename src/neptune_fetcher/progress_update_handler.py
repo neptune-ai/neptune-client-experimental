@@ -41,6 +41,15 @@ class ProgressUpdateHandler(ABC):
     def post_table_fetch(self) -> None:
         ...
 
+    def download_setup(self, total_size: int) -> None:
+        ...
+
+    def on_download_chunk(self, chunk: int) -> None:
+        ...
+
+    def post_download(self) -> None:
+        ...
+
 
 class NullProgressUpdateHandler(ProgressUpdateHandler):
     ...
@@ -58,6 +67,11 @@ class DefaultProgressUpdateHandler(ProgressUpdateHandler):
 
         self._table_bar = tqdm()
 
+    def download_setup(self, total_size: int) -> None:
+        from tqdm import tqdm
+
+        self._download_bar = tqdm(total=total_size)
+
     def on_series_fetch(self, step: int) -> None:
         self._series_bar.update(n=step)
         self._series_bar.set_description("Fetching series values")
@@ -71,3 +85,10 @@ class DefaultProgressUpdateHandler(ProgressUpdateHandler):
 
     def post_table_fetch(self) -> None:
         self._table_bar.close()
+
+    def on_download_chunk(self, chunk: int) -> None:
+        self._download_bar.update(n=chunk)
+        self._download_bar.set_description("Downloading file")
+
+    def post_download(self) -> None:
+        self._download_bar.close()
