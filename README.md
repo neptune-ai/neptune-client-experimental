@@ -141,8 +141,8 @@ df = project.fetch_runs_df()
 Output:
 ```text
 Fetching run table, step 100
-Fetching run table, step 200
-Fetching run table, step 235
+Fetching run table, step 100
+Fetching run table, step 100
 ```
 
 ## License
