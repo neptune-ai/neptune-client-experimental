@@ -4,7 +4,7 @@ This package consists of experimental features that are not yet ready for produc
 
 # Neptune Fetcher
 
-Neptune Fetcher is a Python package designed for efficient data fetching and manipulation from Neptune projects and runs. It provides classes and methods for interacting with Neptune data in a read-only manner.
+Neptune Fetcher is a Python package designed for efficient fetching and manipulation of data from Neptune projects and runs. It provides classes and methods for interacting with Neptune data in a read-only manner.
 
 ## Installation
 ```bash
