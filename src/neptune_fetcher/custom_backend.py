@@ -39,7 +39,10 @@ from neptune_fetcher.attributes import (
     Boolean,
     String,
 )
-from neptune_fetcher.progress_update_handler import ProgressUpdateHandler
+from neptune_fetcher.progress_update_handler import (
+    NullProgressUpdateHandler,
+    ProgressUpdateHandler,
+)
 
 
 def to_attribute(attr) -> Attribute:
@@ -56,7 +59,9 @@ def get_attribute_from_dto(dto: Any) -> Attr:
 class CustomBackend(HostedNeptuneBackend):
     def __init__(self, *args: Any, progress_update_handler: Optional[ProgressUpdateHandler] = None, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self.progress_update_handler = progress_update_handler
+        self.progress_update_handler = (
+            progress_update_handler if progress_update_handler else NullProgressUpdateHandler()
+        )
 
     def get_attributes(self, container_id: str, container_type: ContainerType) -> List[Attribute]:
         params = {

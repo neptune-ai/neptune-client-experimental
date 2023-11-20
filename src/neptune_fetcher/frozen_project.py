@@ -44,7 +44,10 @@ from neptune_fetcher.fetchable import (
     Fetchable,
     which_fetchable,
 )
-from neptune_fetcher.progress_update_handler import ProgressUpdateHandler
+from neptune_fetcher.progress_update_handler import (
+    DefaultProgressUpdateHandler,
+    ProgressUpdateHandler,
+)
 
 T = TypeVar("T")
 
@@ -99,8 +102,9 @@ class FrozenProject:
         return self.fetch_runs_df(columns=["sys/id", "sys/name"])
 
     def progress_indicator(self, handler: Union[ProgressUpdateHandler, bool]):
-        if isinstance(handler, bool) and handler:
-            self._backend.progress_update_handler = ProgressUpdateHandler()
+        if isinstance(handler, bool):
+            if handler:
+                self._backend.progress_update_handler = DefaultProgressUpdateHandler()
         else:
             self._backend.progress_update_handler = handler
 
@@ -143,17 +147,8 @@ class FrozenProject:
         def __getitem__(self, item) -> Union[Fetchable]:
             return self._structure[item]
 
-            # self._structure['a/b/c'] = Attribute(type=AttributeType.INT)
-            # # fetch
-            # self._cache['a/b/c'] = Integer(type=AttributeType.INT, value=4)
-            # # clear cache
-            # del self._cache['a/b/c']
-
         def __delitem__(self, key: str) -> None:
             del self._cache[key]
-
-            # queryAttributeDefinitions
-            # getAttributesWithPathsFilter
 
         @property
         def field_names(self) -> Generator[str, None, None]:
