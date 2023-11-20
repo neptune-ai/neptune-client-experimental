@@ -36,10 +36,10 @@ from neptune_fetcher import (
 
 - _`FrozenProject.FrozenRun`_: Represents a single run within a project with read-only access.
     - _Methods_:
-        - `__getitem__(item)`: Accesses an attribute by its path.
-        - `__delitem__(key)`: Removes an attribute from the local cache.
+        - `__getitem__(item)`: Accesses a field by its path.
+        - `__delitem__(key)`: Removes a field from the local cache.
         - `field_names`: Yields the names of all available fields in the run.
-        - `prefetch(paths: List[str])`: Loads specified attribute values into local cache
+        - `prefetch(paths: List[str])`: Loads specified fields values into local cache
 
 - `ProgressUpdateHandler`: Handles feedback presentation during data fetching.
     - _Method Overriding_:
@@ -86,11 +86,11 @@ from neptune_fetcher import FrozenProject
 
 project = FrozenProject(workspace="some", project="project")
 for run in project.fetch_frozen_runs(with_ids=["PROJ-2"]):
-    for attr in run.field_names:
-        if attr.startswith('param'):
-            print(run[attr].fetch())
-        if attr.startswith('metric'):
-            print(run[attr].fetch_values())
+    for field in run.field_names:
+        if field.startswith('param'):
+            print(run[field].fetch())
+        if field.startswith('metric'):
+            print(run[field].fetch_values())
 ```
 
 ### Prefetching Values
