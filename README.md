@@ -39,7 +39,7 @@ from neptune_fetcher import (
         - `__getitem__(item)`: Accesses a field by its path.
         - `__delitem__(key)`: Removes a field from the local cache.
         - `field_names`: Yields the names of all available fields in the run.
-        - `prefetch(paths: List[str])`: Loads specified fields values into local cache
+        - `prefetch(paths: List[str])`: Loads values of specified fields into local cache.
 
 - `ProgressUpdateHandler`: Handles feedback presentation during data fetching.
     - _Method Overriding_:
