@@ -1,2 +1,150 @@
 # Neptune Experimental Package
-Extensions to the core package for experimental features.
+
+This package consists of experimental features that are not yet ready for production use. The API is subject to change without notice.
+
+# Neptune Fetcher
+
+Neptune Fetcher is a Python package designed for efficient data fetching and manipulation from Neptune projects and runs. It provides classes and methods for interacting with Neptune data in a read-only manner.
+
+## Installation
+```bash
+pip install --upgrade neptune neptune-experimental
+```
+
+## Usage
+
+### Importing
+```python
+from neptune_fetcher import (
+    FrozenProject, ProgressUpdateHandler
+)
+```
+
+### Overview of Classes
+- `FrozenProject`: A lightweight, read-only class for handling basic project information.
+    - _Constructor Parameters_:
+        - `project`: Optional string specifying the project name.
+        - `workspace`: Optional string specifying the workspace.
+        - `api_token`: Optional string for the API token.
+        - `proxies`: Optional dictionary for proxy configuration.
+    - _Methods_:
+        - `list_runs()`: Yields dictionaries with basic information about each run, including `sys/id` and `sys/name`.
+        - `fetch_frozen_runs(with_ids: List[str])`: Returns a generator for `FrozenRun` instances for specified run IDs.
+        - `fetch_runs()`: Fetches runs as a DataFrame with default columns.
+        - `progress_indicator(handler: Union[ProgressUpdateHandler, bool])`: Sets a progress indicator.
+        - `fetch_runs_df(columns, with_ids, states, owners, tags, trashed)`: Fetches runs as a DataFrame based on specified filters.
+
+- _`FrozenProject.FrozenRun`_: Represents a single run within a project with read-only access.
+    - _Methods_:
+        - `__getitem__(item)`: Accesses an attribute by its path.
+        - `__delitem__(key)`: Removes an attribute from the local cache.
+        - `field_names`: Yields the names of all available fields in the run.
+        - `prefetch(paths: List[str])`: Loads specified attribute values into local cache
+
+- `ProgressUpdateHandler`: Handles feedback presentation during data fetching.
+    - _Method Overriding_:
+        - `series_setup(total_series: int, series_limit: int)`: Sets up a progress bar for series fetching.
+        - `on_series_fetch(step: int)`: On every step in the series fetching process.
+        - `post_series_fetch()`: After series fetching is completed should clean up the resources.
+        - `table_setup()`: Initializes a progress bar for table fetching.
+        - `on_run_table_fetch(step: int)`: On every step in the table fetching process.
+        - `post_table_fetch()`: After table fetching is completed should clean up the resources.
+
+## Examples
+### Fetching Project Metadata
+
+```python
+from neptune_fetcher import FrozenProject
+
+project = FrozenProject(workspace="some", project="project")
+```
+
+### Listing Runs in a Project
+
+```python
+from neptune_fetcher import FrozenProject
+
+project = FrozenProject(workspace="some", project="project")
+ids = list(map(lambda row: row["sys/id"], project.list_runs()))
+```
+
+### Filtering and Processing Runs
+
+```python
+from neptune_fetcher import FrozenProject
+project = FrozenProject(workspace="some", project="project")
+df = project.fetch_runs_df()
+
+matches = df['sys/name'].str.match('metrics.*')
+ids = df[matches]['sys/id']
+```
+
+### Iterating Over Runs
+
+```python
+from neptune_fetcher import FrozenProject
+
+project = FrozenProject(workspace="some", project="project")
+for run in project.fetch_frozen_runs(with_ids=["PROJ-2"]):
+    for attr in run.field_names:
+        if attr.startswith('param'):
+            print(run[attr].fetch())
+        if attr.startswith('metric'):
+            print(run[attr].fetch_values())
+```
+
+### Prefetching Values
+
+```python
+run.prefetch(['metric1', 'metric2'])
+print(run['metric1'].fetch(), run['metric2'].fetch()) # This will use the local cache
+```
+
+### Purging Local Cache
+
+```python
+del run['metric1']
+```
+
+### Custom Progress Indicator
+
+Use default progress indicator:
+
+```python
+from neptune_fetcher import FrozenProject
+project = FrozenProject(workspace="some", project="project")
+project.progress_indicator(True)
+```
+
+or define your own progress indicator by inheriting from `ProgressUpdateHandler`:
+
+```python
+from neptune_fetcher import (
+    ProgressUpdateHandler,
+    FrozenProject,
+)
+
+class MyProgressIndicator(ProgressUpdateHandler):
+    def table_setup(self):
+        pass
+
+    def on_run_table_fetch(self, step: int):
+        print(f'Fetching run table, step {step}')
+
+    def post_table_fetch(self):
+        pass
+
+project = FrozenProject('some/project')
+project.progress_indicator(MyProgressIndicator())
+df = project.fetch_runs_df()
+```
+Output:
+```text
+Fetching run table, step 100
+Fetching run table, step 200
+Fetching run table, step 235
+```
+
+## License
+
+This project is licensed under the Apache License Version 2.0. For more details, see [Apache License Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).
