@@ -23,8 +23,7 @@ from abc import ABC
 
 
 class ProgressUpdateHandler(ABC):
-    """
-    Abstract base class for progress update handlers.
+    """Abstract base class for progress update handlers.
 
     Example usage:
     >>> from neptune_fetcher import ReadOnlyProject
@@ -38,54 +37,56 @@ class ProgressUpdateHandler(ABC):
     """
 
     def pre_series_fetch(self, total_series: int, series_limit: int) -> None:
-        """Runs before a series is fetched. Use it to set the tracking up.
+        """Executes before a series is fetched. Use it to set up the tracking up.
 
-        Parameters:
-            :param total_series: Total number of items in the series.
-            :param series_limit: Limit of items fetched in a single iteration."""
+        Args:
+            total_series: Total number of items in the series.
+            series_limit: Limit of items fetched in a single iteration.
+        """
         ...
 
     def pre_runs_table_fetch(self) -> None:
-        """Runs before a run table is fetched. Use it to set the tracking up."""
+        """Executes before a run table is fetched. Use it to set the tracking up."""
         ...
 
     def pre_download(self, total_size: int) -> None:
-        """Runs before a file or a fileset is downloaded. Use it to set the tracking up.
+        """Executes before a file or a fileset is downloaded. Use it to set the tracking up.
 
-        Parameters:
-            :param total_size: Total size of the file."""
+        Args:
+            total_size: Total size of the file.
+        """
         ...
 
     def on_series_fetch(self, step: int) -> None:
-        """Runs after every iteration of a series fetch. Use it to update the progress.
+        """Executes after every iteration of a series fetch. Use it to update the progress.
 
-        Parameters:
-            :param step: number of items that were fetched during the iteration."""
+        Args:
+            step: number of items that were fetched during the iteration."""
         ...
 
     def on_runs_table_fetch(self, step: int) -> None:
-        """Runs after every iteration of a run table fetch. Use it to update the progress.
+        """Executes after every iteration of a runs table fetch. Use it to update the progress.
 
-        Parameters:
-            :param step: number of items that were fetched during the iteration."""
+        Args:
+            step: number of items that were fetched during the iteration."""
         ...
 
     def post_series_fetch(self) -> None:
-        """Runs after the series fetch is completed. Use it to clean the tracking up."""
+        """Executes after the series fetch is completed. Use it to clean the tracking up."""
         ...
 
     def post_runs_table_fetch(self) -> None:
-        """Runs after the run table fetch is completed. Use it to clean the tracking up."""
+        """Executes after the run table fetch is completed. Use it to clean the tracking up."""
 
     def on_download_chunk(self, chunk: int) -> None:
-        """Runs after every iteration of a file or fileset download. Use it to update the progress.
+        """Executes after every iteration of a file or fileset download. Use it to update the progress.
 
-        Parameters:
-            :param chunk: number of bytes that were fetched during the iteration."""
+        Args:
+            chunk: Number of bytes that were fetched during the iteration."""
         ...
 
     def post_download(self) -> None:
-        """Runs after the download is completed. Use it to clean the tracking up."""
+        """Executes after the download is completed. Use it to clean the tracking up."""
         ...
 
 
