@@ -8,7 +8,7 @@ WORKSPACE = "<WORKSPACE HERE>"
 
 def create_neptune_run() -> str:
     with Run(project=PROJECT) as run:
-        run["files/my_file"].upload("file.json")
+        run["files/my_file"].upload("my_file.json")
 
         for i in range(10_000):
             run["series/my_float_series"].log(i**2)
