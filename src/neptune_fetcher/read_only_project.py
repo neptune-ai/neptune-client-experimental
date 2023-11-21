@@ -72,6 +72,7 @@ def _get_attribute(entry: TableEntry, name: str) -> Optional[str]:
 
 class ReadOnlyProject:
     """Class for retrieving metadata from a neptune.ai project in a limited read-only mode."""
+
     def __init__(
         self,
         project: Optional[str] = None,
