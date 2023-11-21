@@ -79,15 +79,18 @@ class ReadOnlyProject:
         api_token: Optional[str] = None,
         proxies: Optional[dict] = None,
     ) -> None:
-        """
-        Initializes a new FrozenProject instance.
+        """Initializes a Neptune project in limited read-only mode.
 
-        Parameters:
-        - project (Optional[str]): The name of the project. Defaults to None.
-        - workspace (Optional[str]): The workspace associated with the project. Defaults to None.
-        - api_token (Optional[str]): User's API token. Defaults to None.
+        Compared to a regular Project object, it contains only basic project information and exposes more lightweight
+        methods for fetching run metadata.
+
+        Args:
+            project: The name of the Neptune project.
+            workspace: The workspace associated with the project.
+            api_token: Neptune account's API token.
                 If left empty, the value of the NEPTUNE_API_TOKEN environment variable is used (recommended).
-        - proxies (Optional[dict]): A dictionary of proxy settings if needed. Defaults to None."""
+            proxies: A dictionary of proxy settings if needed.
+        """
         self._project: Optional[str] = project
         self._backend: CustomBackend = CustomBackend(
             credentials=Credentials.from_token(api_token=api_token), proxies=proxies
@@ -98,9 +101,10 @@ class ReadOnlyProject:
         self._project_id: UniqueId = self._project_api_object.id
 
     def list_runs(self) -> Generator[Dict[str, Optional[str]], None, None]:
+        """Lists IDs and names of the runs in the project.
+
+        Returns a generator of run info dictionaries `{"sys/id": ..., "sys/name": ...}`.
         """
-        List ids and names of the runs in the project.
-        :return: Generator of run info dictionaries `{"sys/id": ..., "sys/name": ...}`"""
         leaderboard_entries = self._backend.search_leaderboard_entries(
             project_id=self._project_id,
             types=[ContainerType.RUN],
@@ -117,11 +121,12 @@ class ReadOnlyProject:
             }
 
     def fetch_read_only_runs(self, with_ids: List[str]) -> Generator["ReadOnlyProject.ReadOnlyRun", None, None]:
-        """
-        List project run object in the form of `FrozenRun` generator (read-only runs).
+        """Lists runs of the project in the form of read-only runs.
 
-        :param with_ids: List of run ids to fetch
-        :return: Generator of `FrozenProject.FrozenRun` instances.
+        Returns a generator of `ReadOnlyProject.ReadOnlyRun` instances.
+
+        Args:
+            with_ids: List of run ids to fetch.
         """
         for run_id in with_ids:
             yield ReadOnlyProject.ReadOnlyRun(
@@ -129,21 +134,23 @@ class ReadOnlyProject:
             )
 
     def fetch_runs(self) -> "DataFrame":
-        """
-        Fetch a table containing ids and names of project runs.
-        :return: `pandas.DataFrame` with two columns ('sys/id' and 'sys/name') and rows corresponding to project runs.
+        """Fetches a table containing IDs and names of runs in the project.
+
+        Returns `pandas.DataFrame` with two columns ('sys/id' and 'sys/name') and rows corresponding to project runs.
         """
         return self.fetch_runs_df(columns=["sys/id", "sys/name"])
 
     def progress_indicator(self, handler: Union[ProgressUpdateHandler, bool]) -> None:
-        """
-        Set or reset progress indicator handler to track progress of downloading files/file sets, fetching series values
-        or run tables.
+        """Sets or resets a progress indicator handler to track download progress.
 
-        :param handler: Either a boolean value or a `ProgressUpdateHandler` instance.
-            If `ProgressUpdateHandler` instance - will use this instance to track progress.
-            If `True` - equivalent to using `DefaultProgressUpdateHandler`.
-            If `False` - resets progress indicator (no progress update will be performed).
+        The progress concerns the downloading of files/filesets, fetching series values, and fetching the runs table
+        from a Neptune project.
+
+        Args:
+            handler: Either a boolean value or a `ProgressUpdateHandler` instance.
+                If `ProgressUpdateHandler` instance - will use this instance to track progress.
+                If `True` - equivalent to using `DefaultProgressUpdateHandler`.
+                If `False` - resets progress indicator (no progress update will be performed).
         """
         if isinstance(handler, bool):
             if handler:
@@ -163,34 +170,33 @@ class ReadOnlyProject:
         tags: Optional[Iterable[str]] = None,
         trashed: Optional[bool] = False,
     ) -> "DataFrame":
-        """
-        Fetches runs information and returns it as a pandas DataFrame.
+        """Fetches the runs' metadata and returns them as a pandas DataFrame.
 
-        Parameters:
-        - columns (Optional[Iterable[str]]): A list of column names to include in the DataFrame.
-          Defaults to None, which includes all available columns.
-        - with_ids (Optional[Iterable[str]]): A list of run IDs to filter the results. Defaults to None.
-        - states (Optional[Iterable[str]]): A list of run states to filter the results. Defaults to None.
-        - owners (Optional[Iterable[str]]): A list of owner names to filter the results. Defaults to None.
-        - tags (Optional[Iterable[str]]): A list of tags to filter the results. Defaults to None.
-        - trashed (Optional[bool]): Whether to return trashed runs as the result. Defaults to False.
-            If True: return only trashed runs.
-            If False: return only non-trashed runs.
-            If None: return all runs.
+        Args:
+            columns: A list of column names to include in the DataFrame.
+                Defaults to None, which includes all available columns.
+            with_ids: A list of run IDs to filter the results.
+            states: A list of run states to filter the results.
+            owners: A list of owner names to filter the results.
+            tags: A list of tags to filter the results.
+            trashed: Whether to return trashed runs as the result.
+                If True: return only trashed runs.
+                If False (default): return only non-trashed runs.
+                If None: return all runs.
 
         Returns:
-        - DataFrame: A pandas DataFrame containing information about the fetched runs.
+            DataFrame: A pandas DataFrame containing information about the fetched runs.
 
         Example:
-        ```
-        # Fetch all runs with specific columns
-        columns_to_fetch = ["sys/name", "sys/modification_time", "training/lr"]
-        runs_df = my_project.fetch_runs_df(columns=columns_to_fetch, states=["active"])
+            ```
+            # Fetch all runs with specific columns
+            columns_to_fetch = ["sys/name", "sys/modification_time", "training/lr"]
+            runs_df = my_project.fetch_runs_df(columns=columns_to_fetch, states=["active"])
 
-        # Fetch runs by specific IDs
-        specific_run_ids = ["run123", "run456"]
-        specific_runs_df = my_project.fetch_runs_df(with_ids=specific_run_ids)
-        ```
+            # Fetch runs by specific IDs
+            specific_run_ids = ["RUN-123", "RUN-456"]
+            specific_runs_df = my_project.fetch_runs_df(with_ids=specific_run_ids)
+            ```
         """
         query = prepare_nql_query(with_ids, states, owners, tags, trashed)
 
@@ -235,16 +241,17 @@ class ReadOnlyProject:
 
         @property
         def field_names(self) -> Generator[str, None, None]:
-            """
-            List names of run fields.
-            :return: Generator of run fields.
+            """Lists names of run fields.
+
+            Returns a generator of run fields.
             """
             yield from self._structure
 
         def prefetch(self, paths: List[str]) -> None:
-            """
-            Prefetch values of a list of fields and store them in local cache.
-            :param paths: List of field paths to prefetch
+            """Prefetches values of a list of fields and stores them in local cache.
+
+            Args:
+                paths: List of field paths to prefetch.
             """
             fetched = self.project._backend.prefetch_values(self._container_id, ContainerType.RUN, paths)
             self._cache.update(fetched)
