@@ -96,7 +96,7 @@ class CustomBackend(HostedNeptuneBackend):
                 container_id=container_id,
                 attribute=path_to_str(path),
                 destination=destination,
-                pre_download_hook=self.progress_update_handler.download_setup,
+                pre_download_hook=self.progress_update_handler.pre_download,
                 download_iter_hook=self.progress_update_handler.on_download_chunk,
                 post_download_hook=self.progress_update_handler.post_download,
             )
@@ -119,7 +119,7 @@ class CustomBackend(HostedNeptuneBackend):
                 swagger_client=self.leaderboard_client,
                 download_id=download_request.id,
                 destination=destination,
-                pre_download_hook=self.progress_update_handler.download_setup,
+                pre_download_hook=self.progress_update_handler.pre_download,
                 download_iter_hook=self.progress_update_handler.on_download_chunk,
                 post_download_hook=self.progress_update_handler.post_download,
             )
