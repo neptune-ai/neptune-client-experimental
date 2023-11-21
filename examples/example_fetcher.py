@@ -2,9 +2,12 @@ from neptune import Run
 
 from neptune_fetcher import FrozenProject
 
+PROJECT = "<PROJECT HERE>"
+WORKSPACE = "<WORKSPACE HERE>"
+
 
 def create_neptune_run() -> str:
-    with Run(project="Aleksander-benchmark") as run:
+    with Run(project=PROJECT) as run:
         run["files/my_file"].upload("file.json")
 
         for i in range(10_000):
@@ -20,7 +23,7 @@ def main():
     run_id = create_neptune_run()
 
     print("Run created. Now let's use the new fetcher API")
-    project = FrozenProject(workspace="administrator", project="Aleksander-benchmark")
+    project = FrozenProject(workspace=WORKSPACE, project=PROJECT)
 
     run_info = list(project.list_runs())
     print("Run info list:\n", run_info, "\n###########################################\n")
