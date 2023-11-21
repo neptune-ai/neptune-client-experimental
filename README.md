@@ -43,12 +43,12 @@ from neptune_fetcher import (
 
 - `ProgressUpdateHandler`: Handles feedback presentation during data fetching.
     - _Method Overriding_:
-        - `series_setup(total_series: int, series_limit: int)`: Sets up a progress bar for series fetching.
+        - `pre_series_fetch(total_series: int, series_limit: int)`: Sets up a progress bar for series fetching.
         - `on_series_fetch(step: int)`: On every step in the series fetching process.
         - `post_series_fetch()`: After series fetching is completed should clean up the resources.
-        - `table_setup()`: Initializes a progress bar for table fetching.
+        - `pre_run_table_fetch()`: Initializes a progress bar for table fetching.
         - `on_run_table_fetch(step: int)`: On every step in the table fetching process.
-        - `post_table_fetch()`: After table fetching is completed should clean up the resources.
+        - `post_run_table_fetch()`: After table fetching is completed should clean up the resources.
 
 ## Examples
 ### Fetching Project Metadata
@@ -125,13 +125,13 @@ from neptune_fetcher import (
 )
 
 class MyProgressIndicator(ProgressUpdateHandler):
-    def table_setup(self):
+    def pre_run_table_fetch(self):
         pass
 
     def on_run_table_fetch(self, step: int):
         print(f"Fetching runs table, step {step}")
 
-    def post_table_fetch(self):
+    def post_run_table_fetch(self):
         pass
 
 project = FrozenProject("some/project")
