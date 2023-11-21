@@ -234,8 +234,16 @@ class FrozenProject:
 
         @property
         def field_names(self) -> Generator[str, None, None]:
+            """
+            List names of run fields.
+            :return: Generator of run fields.
+            """
             yield from self._structure
 
         def prefetch(self, paths: List[str]) -> None:
+            """
+            Prefetch values of a list of fields and store them in local cache.
+            :param paths: List of field paths to prefetch
+            """
             fetched = self.project._backend.prefetch_values(self._container_id, ContainerType.RUN, paths)
             self._cache.update(fetched)
