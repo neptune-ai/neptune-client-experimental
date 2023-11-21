@@ -49,6 +49,9 @@ from neptune_fetcher import (
         - `table_setup()`: Initializes a progress bar for table fetching.
         - `on_run_table_fetch(step: int)`: On every step in the table fetching process.
         - `post_table_fetch()`: After table fetching is completed should clean up the resources.
+        - `pre_download(total_size: int)`: Sets up tracking of download process.
+        - `on_download_chunk(chunk: int)`: On every step of the download process.
+        - `post_download()`: After the download process is completed should clean up the resources.
 
 ## Examples
 ### Fetching Project Metadata
