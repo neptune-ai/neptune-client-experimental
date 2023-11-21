@@ -1,3 +1,9 @@
+## [UNRELEASED] neptune-experimental 1.0.0
+
+### Breaking changes
+- Renamed methods in `ProgressUpdateHandler` ([#26](https://github.com/neptune-ai/neptune-client-experimental/pull/26))
+
+
 ## neptune-experimental 0.2.0
 
 ### Features
