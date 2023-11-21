@@ -23,22 +23,52 @@ from abc import ABC
 
 
 class ProgressUpdateHandler(ABC):
+    """
+    Abstract base class for progress update handlers.
+
+    Example usage:
+    >>> from neptune_fetcher import FrozenProject
+    >>> from neptune_fetcher.progress_update_handler import ProgressUpdateHandler
+
+    >>> class CustomProgressUpdateHandler(ProgressUpdateHandler):
+    >>>     ...  # overwrite the methods you need
+
+    >>> project = FrozenProject(...)
+    >>> project.progress_indicator(CustomProgressUpdateHandler())  # use your custom handler to track progress
+    """
+
     def pre_series_fetch(self, total_series: int, series_limit: int) -> None:
+        """Runs before a series is fetched. Use it to the tracking up.
+
+        Parameters:
+            :param total_series: Total number of items in the series.
+            :param series_limit: Limit of items fetched in a single iteration."""
         ...
 
     def pre_run_table_fetch(self) -> None:
+        """Runs before a run table is fetched. Use it to the tracking up."""
         ...
 
     def on_series_fetch(self, step: int) -> None:
+        """Runs after every iteration of a series fetch. Use it to update the progress.
+
+        Parameters:
+            :param step: number of items that were fetched during the iteration."""
         ...
 
     def on_run_table_fetch(self, step: int) -> None:
+        """Runs after every iteration of a run table fetch. Use it to update the progress.
+
+        Parameters:
+            :param step: number of items that were fetched during the iteration."""
         ...
 
     def post_series_fetch(self) -> None:
+        """Runs after the series fetch is completed. Use it to clean the tracking up."""
         ...
 
     def post_run_table_fetch(self) -> None:
+        """Runs after the run table fetch is completed. Use it to clean the tracking up."""
         ...
 
 
