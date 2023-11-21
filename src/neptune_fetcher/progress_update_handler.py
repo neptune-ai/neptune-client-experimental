@@ -45,7 +45,7 @@ class ProgressUpdateHandler(ABC):
             :param series_limit: Limit of items fetched in a single iteration."""
         ...
 
-    def pre_run_table_fetch(self) -> None:
+    def pre_runs_table_fetch(self) -> None:
         """Runs before a run table is fetched. Use it to set the tracking up."""
         ...
 
@@ -56,7 +56,7 @@ class ProgressUpdateHandler(ABC):
             :param step: number of items that were fetched during the iteration."""
         ...
 
-    def on_run_table_fetch(self, step: int) -> None:
+    def on_runs_table_fetch(self, step: int) -> None:
         """Runs after every iteration of a run table fetch. Use it to update the progress.
 
         Parameters:
@@ -67,7 +67,7 @@ class ProgressUpdateHandler(ABC):
         """Runs after the series fetch is completed. Use it to clean the tracking up."""
         ...
 
-    def post_run_table_fetch(self) -> None:
+    def post_runs_table_fetch(self) -> None:
         """Runs after the run table fetch is completed. Use it to clean the tracking up."""
         ...
 
@@ -83,7 +83,7 @@ class DefaultProgressUpdateHandler(ProgressUpdateHandler):
         self._series_bar = tqdm(total=total_series)
         self._series_bar.update(n=series_limit)
 
-    def pre_run_table_fetch(self) -> None:
+    def pre_runs_table_fetch(self) -> None:
         from tqdm import tqdm
 
         self._table_bar = tqdm()
@@ -95,9 +95,9 @@ class DefaultProgressUpdateHandler(ProgressUpdateHandler):
     def post_series_fetch(self) -> None:
         self._series_bar.close()
 
-    def on_run_table_fetch(self, step: int) -> None:
+    def on_runs_table_fetch(self, step: int) -> None:
         self._table_bar.update(n=step)
         self._table_bar.set_description("Fetching runs")
 
-    def post_run_table_fetch(self) -> None:
+    def post_runs_table_fetch(self) -> None:
         self._table_bar.close()

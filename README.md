@@ -46,9 +46,9 @@ from neptune_fetcher import (
         - `pre_series_fetch(total_series: int, series_limit: int)`: Sets up a progress bar for series fetching.
         - `on_series_fetch(step: int)`: On every step in the series fetching process.
         - `post_series_fetch()`: After series fetching is completed should clean up the resources.
-        - `pre_run_table_fetch()`: Initializes a progress bar for table fetching.
-        - `on_run_table_fetch(step: int)`: On every step in the table fetching process.
-        - `post_run_table_fetch()`: After table fetching is completed should clean up the resources.
+        - `pre_runs_table_fetch()`: Initializes a progress bar for table fetching.
+        - `on_runs_table_fetch(step: int)`: On every step in the table fetching process.
+        - `post_runs_table_fetch()`: After table fetching is completed should clean up the resources.
 
 ## Examples
 ### Fetching Project Metadata
@@ -125,13 +125,13 @@ from neptune_fetcher import (
 )
 
 class MyProgressIndicator(ProgressUpdateHandler):
-    def pre_run_table_fetch(self):
+    def pre_runs_table_fetch(self):
         pass
 
-    def on_run_table_fetch(self, step: int):
+    def on_runs_table_fetch(self, step: int):
         print(f"Fetching runs table, step {step}")
 
-    def post_run_table_fetch(self):
+    def post_runs_table_fetch(self):
         pass
 
 project = FrozenProject("some/project")
