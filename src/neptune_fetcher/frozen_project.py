@@ -78,6 +78,15 @@ class FrozenProject:
         api_token: Optional[str] = None,
         proxies: Optional[dict] = None,
     ) -> None:
+        """
+        Initializes a new FrozenProject instance.
+
+        Parameters:
+        - project (Optional[str]): The name of the project. Defaults to None.
+        - workspace (Optional[str]): The workspace associated with the project. Defaults to None.
+        - api_token (Optional[str]): User's API token. Defaults to None.
+                If left empty, the value of the NEPTUNE_API_TOKEN environment variable is used (recommended).
+        - proxies (Optional[dict]): A dictionary of proxy settings if needed. Defaults to None."""
         self._project: Optional[str] = project
         self._backend: CustomBackend = CustomBackend(
             credentials=Credentials.from_token(api_token=api_token), proxies=proxies
@@ -88,6 +97,9 @@ class FrozenProject:
         self._project_id: UniqueId = self._project_api_object.id
 
     def list_runs(self) -> Generator[Dict[str, Optional[str]], None, None]:
+        """
+        List ids and names of the runs in the project.
+        :return: Generator of run info dictionaries `{"sys/id": ..., "sys/name": ...}`"""
         leaderboard_entries = self._backend.search_leaderboard_entries(
             project_id=self._project_id,
             types=[ContainerType.RUN],
@@ -104,15 +116,34 @@ class FrozenProject:
             }
 
     def fetch_frozen_runs(self, with_ids: List[str]) -> Generator["FrozenProject.FrozenRun", None, None]:
+        """
+        List project run object in the form of `FrozenRun` generator (read-only runs).
+
+        :param with_ids: List of run ids to fetch
+        :return: Generator of `FrozenProject.FrozenRun` instances.
+        """
         for run_id in with_ids:
             yield FrozenProject.FrozenRun(
                 project=self, container_id=QualifiedName(f"{self.project_identifier}/{run_id}")
             )
 
     def fetch_runs(self) -> "DataFrame":
+        """
+        Fetch a table containing ids and names of project runs.
+        :return: `pandas.DataFrame` with two columns ('sys/id' and 'sys/name') and rows corresponding to project runs.
+        """
         return self.fetch_runs_df(columns=["sys/id", "sys/name"])
 
     def progress_indicator(self, handler: Union[ProgressUpdateHandler, bool]) -> None:
+        """
+        Set or reset progress indicator handler to track progress of downloading files/file sets, fetching series values
+        or run tables.
+
+        :param handler: Either a boolean value or a `ProgressUpdateHandler` instance.
+            If `ProgressUpdateHandler` instance - will use this instance to track progress.
+            If `True` - equivalent to using `DefaultProgressUpdateHandler`.
+            If `False` - resets progress indicator (no progress update will be performed).
+        """
         if isinstance(handler, bool):
             if handler:
                 self._backend.progress_update_handler = DefaultProgressUpdateHandler()
@@ -131,6 +162,35 @@ class FrozenProject:
         tags: Optional[Iterable[str]] = None,
         trashed: Optional[bool] = False,
     ) -> "DataFrame":
+        """
+        Fetches runs information and returns it as a pandas DataFrame.
+
+        Parameters:
+        - columns (Optional[Iterable[str]]): A list of column names to include in the DataFrame.
+          Defaults to None, which includes all available columns.
+        - with_ids (Optional[Iterable[str]]): A list of run IDs to filter the results. Defaults to None.
+        - states (Optional[Iterable[str]]): A list of run states to filter the results. Defaults to None.
+        - owners (Optional[Iterable[str]]): A list of owner names to filter the results. Defaults to None.
+        - tags (Optional[Iterable[str]]): A list of tags to filter the results. Defaults to None.
+        - trashed (Optional[bool]): Whether to return trashed runs as the result. Defaults to False.
+            If True: return only trashed runs.
+            If False: return only non-trashed runs.
+            If None: return all runs.
+
+        Returns:
+        - DataFrame: A pandas DataFrame containing information about the fetched runs.
+
+        Example:
+        ```
+        # Fetch all runs with specific columns
+        columns_to_fetch = ["sys/name", "sys/modification_time", "training/lr"]
+        runs_df = my_project.fetch_runs_df(columns=columns_to_fetch, states=["active"])
+
+        # Fetch runs by specific IDs
+        specific_run_ids = ["run123", "run456"]
+        specific_runs_df = my_project.fetch_runs_df(with_ids=specific_run_ids)
+        ```
+        """
         query = prepare_nql_query(with_ids, states, owners, tags, trashed)
 
         if columns is not None:
