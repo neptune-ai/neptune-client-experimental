@@ -90,7 +90,7 @@ class Series(ABC, Generic[T]):
     ) -> "DataFrame":
         import pandas as pd
 
-        limit = 100
+        limit = 1000
         val = self._fetch_values_from_backend(backend, container_id, container_type, path, 0, limit)
         data = val.values
         offset = limit
