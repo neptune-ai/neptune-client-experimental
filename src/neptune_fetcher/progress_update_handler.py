@@ -38,7 +38,7 @@ class ProgressUpdateHandler(ABC):
     """
 
     def pre_series_fetch(self, total_series: int, series_limit: int) -> None:
-        """Runs before a series is fetched. Use it to the tracking up.
+        """Runs before a series is fetched. Use it to set the tracking up.
 
         Parameters:
             :param total_series: Total number of items in the series.
@@ -46,7 +46,7 @@ class ProgressUpdateHandler(ABC):
         ...
 
     def pre_run_table_fetch(self) -> None:
-        """Runs before a run table is fetched. Use it to the tracking up."""
+        """Runs before a run table is fetched. Use it to set the tracking up."""
         ...
 
     def on_series_fetch(self, step: int) -> None:
