@@ -148,6 +148,8 @@ Fetching runs table, step 100
 Fetching runs table, step 100
 ```
 
+Implementation of the default update handler can be found in `src/neptune_fetcher/progress_update_handler`.
+
 ### Example
 A full example can be found in `examples/fetch_api.py`.
 
