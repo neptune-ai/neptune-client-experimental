@@ -18,9 +18,10 @@ import os
 import shutil
 import threading
 from datetime import datetime
+from queue import Queue
 from typing import (
+    TYPE_CHECKING,
     Any,
-    Callable,
     List,
     Optional,
 )
@@ -29,14 +30,14 @@ from neptune.constants import ASYNC_DIRECTORY
 from neptune.internal.backends.neptune_backend import NeptuneBackend
 from neptune.internal.container_type import ContainerType
 from neptune.internal.id_formats import UniqueId
-from neptune.internal.init.parameters import (
-    ASYNC_LAG_THRESHOLD,
-    ASYNC_NO_PROGRESS_THRESHOLD,
-)
 from neptune.internal.operation import Operation
 from neptune.internal.operation_processors.async_operation_processor import AsyncOperationProcessor
 from neptune.internal.operation_processors.operation_processor import OperationProcessor
 from neptune.internal.operation_processors.operation_storage import get_container_dir
+
+if TYPE_CHECKING:
+    from neptune.internal.signals_processing.signals import Signal
+
 
 _logger = logging.getLogger(__name__)
 
@@ -48,12 +49,9 @@ class PartitionedOperationProcessor(OperationProcessor):
         container_type: ContainerType,
         backend: NeptuneBackend,
         lock: threading.RLock,
+        queue: "Queue[Signal]",
         batch_size: int,
         sleep_time: float = 5,
-        async_lag_callback: Optional[Callable[[], None]] = None,
-        async_lag_threshold: float = ASYNC_LAG_THRESHOLD,
-        async_no_progress_callback: Optional[Callable[[], None]] = None,
-        async_no_progress_threshold: float = ASYNC_NO_PROGRESS_THRESHOLD,
         partitions: int = 5,
     ):
         self._data_path = self._init_data_path(container_id, container_type)
@@ -64,12 +62,9 @@ class PartitionedOperationProcessor(OperationProcessor):
                 container_type=container_type,
                 backend=backend,
                 lock=lock,
+                queue=queue,
                 sleep_time=sleep_time,
                 batch_size=batch_size,
-                async_lag_callback=async_lag_callback,
-                async_lag_threshold=async_lag_threshold,
-                async_no_progress_callback=async_no_progress_callback,
-                async_no_progress_threshold=async_no_progress_threshold,
                 data_path=self._data_path / f"partition-{partition_id}",
                 should_print_logs=False,
             )

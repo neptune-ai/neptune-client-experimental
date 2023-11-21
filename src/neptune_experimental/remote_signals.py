@@ -19,13 +19,14 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    List,
 )
 
 from neptune_experimental.utils import wrap_method
 
 if TYPE_CHECKING:
     from neptune import Run
-    from neptune.internal.backgroud_job_list import BackgroundJobList
+    from neptune.internal.background_job import BackgroundJob
 
 
 def initialize() -> None:
@@ -33,7 +34,7 @@ def initialize() -> None:
 
     # Monkey patching
     wrap_method(obj=Run, method="__init__", wrapper=init_with_enable_remote_signals)
-    wrap_method(obj=Run, method="_prepare_background_jobs", wrapper=prepare_background_jobs)
+    wrap_method(obj=Run, method="_get_background_jobs", wrapper=get_background_jobs)
 
 
 def init_with_enable_remote_signals(self: "Run", *args: Any, original: Callable[..., Any], **kwargs: Any) -> None:
@@ -51,17 +52,17 @@ def init_with_enable_remote_signals(self: "Run", *args: Any, original: Callable[
     original(self, *args, **kwargs)
 
 
-def prepare_background_jobs(self: "Run", original: Callable[..., Any]) -> "BackgroundJobList":
+def get_background_jobs(self: "Run", original: Callable[..., Any]) -> List["BackgroundJob"]:
     from neptune.internal.websockets.websocket_signals_background_job import WebsocketSignalsBackgroundJob
 
-    background_jobs = original(self)
+    background_jobs: List["BackgroundJob"] = original(self)
 
     if not self._enable_remote_signals:
         # filter-out websocket job
-        background_jobs._jobs = list(
+        background_jobs = list(
             filter(
                 lambda x: not isinstance(x, WebsocketSignalsBackgroundJob),
-                background_jobs._jobs,
+                background_jobs,
             )
         )
 
