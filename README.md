@@ -148,6 +148,9 @@ Fetching runs table, step 100
 Fetching runs table, step 100
 ```
 
+### Example
+A full example can be found in `examples/fetch_api.py`.
+
 ## License
 
 This project is licensed under the Apache License Version 2.0. For more details, see [Apache License Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).
