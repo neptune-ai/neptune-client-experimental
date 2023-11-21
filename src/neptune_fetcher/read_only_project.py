@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 __all__ = [
-    "FrozenProject",
+    "ReadOnlyProject",
 ]
 
 from typing import (
@@ -70,7 +70,7 @@ def _get_attribute(entry: TableEntry, name: str) -> Optional[str]:
         return None
 
 
-class FrozenProject:
+class ReadOnlyProject:
     def __init__(
         self,
         project: Optional[str] = None,
@@ -115,7 +115,7 @@ class FrozenProject:
                 "sys/name": _get_attribute(entry=row, name="sys/name"),
             }
 
-    def fetch_frozen_runs(self, with_ids: List[str]) -> Generator["FrozenProject.FrozenRun", None, None]:
+    def fetch_read_only_runs(self, with_ids: List[str]) -> Generator["ReadOnlyProject.ReadOnlyRun", None, None]:
         """
         List project run object in the form of `FrozenRun` generator (read-only runs).
 
@@ -123,7 +123,7 @@ class FrozenProject:
         :return: Generator of `FrozenProject.FrozenRun` instances.
         """
         for run_id in with_ids:
-            yield FrozenProject.FrozenRun(
+            yield ReadOnlyProject.ReadOnlyRun(
                 project=self, container_id=QualifiedName(f"{self.project_identifier}/{run_id}")
             )
 
@@ -211,8 +211,8 @@ class FrozenProject:
             entries=leaderboard_entries,
         ).to_pandas()
 
-    class FrozenRun:
-        def __init__(self, project: "FrozenProject", container_id: QualifiedName) -> None:
+    class ReadOnlyRun:
+        def __init__(self, project: "ReadOnlyProject", container_id: QualifiedName) -> None:
             self._container_id = container_id
             self.project = project
             self._cache = dict()

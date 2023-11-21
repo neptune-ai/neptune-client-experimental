@@ -14,9 +14,10 @@ pip install --upgrade neptune neptune-experimental
 ## Usage
 
 ### Importing
+
 ```python
 from neptune_fetcher import (
-    FrozenProject, ProgressUpdateHandler
+    ReadOnlyProject, ProgressUpdateHandler
 )
 ```
 
@@ -54,25 +55,26 @@ from neptune_fetcher import (
 ### Fetching Project Metadata
 
 ```python
-from neptune_fetcher import FrozenProject
+from neptune_fetcher import ReadOnlyProject
 
-project = FrozenProject(workspace="some", project="project")
+project = ReadOnlyProject(workspace="some", project="project")
 ```
 
 ### Listing Runs in a Project
 
 ```python
-from neptune_fetcher import FrozenProject
+from neptune_fetcher import ReadOnlyProject
 
-project = FrozenProject(workspace="some", project="project")
+project = ReadOnlyProject(workspace="some", project="project")
 ids = list(map(lambda row: row["sys/id"], project.list_runs()))
 ```
 
 ### Filtering and Processing Runs
 
 ```python
-from neptune_fetcher import FrozenProject
-project = FrozenProject(workspace="some", project="project")
+from neptune_fetcher import ReadOnlyProject
+
+project = ReadOnlyProject(workspace="some", project="project")
 df = project.fetch_runs_df()
 
 matches = df["sys/name"].str.match("metrics.*")
@@ -82,10 +84,10 @@ ids = df[matches]["sys/id"]
 ### Iterating Over Runs
 
 ```python
-from neptune_fetcher import FrozenProject
+from neptune_fetcher import ReadOnlyProject
 
-project = FrozenProject(workspace="some", project="project")
-for run in project.fetch_frozen_runs(with_ids=["PROJ-2"]):
+project = ReadOnlyProject(workspace="some", project="project")
+for run in project.fetch_read_only_runs(with_ids=["PROJ-2"]):
     for field in run.field_names:
         if field.startswith("param"):
             print(run[field].fetch())
@@ -111,8 +113,9 @@ del run["metric1"]
 Use the default progress indicator:
 
 ```python
-from neptune_fetcher import FrozenProject
-project = FrozenProject(workspace="some", project="project")
+from neptune_fetcher import ReadOnlyProject
+
+project = ReadOnlyProject(workspace="some", project="project")
 project.progress_indicator(True)
 ```
 
@@ -121,8 +124,9 @@ or define your own progress indicator by inheriting from `ProgressUpdateHandler`
 ```python
 from neptune_fetcher import (
     ProgressUpdateHandler,
-    FrozenProject,
+    ReadOnlyProject,
 )
+
 
 class MyProgressIndicator(ProgressUpdateHandler):
     def pre_runs_table_fetch(self):
@@ -134,7 +138,8 @@ class MyProgressIndicator(ProgressUpdateHandler):
     def post_runs_table_fetch(self):
         pass
 
-project = FrozenProject("some/project")
+
+project = ReadOnlyProject("some/project")
 project.progress_indicator(MyProgressIndicator())
 df = project.fetch_runs_df()
 ```

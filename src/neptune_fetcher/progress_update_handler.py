@@ -27,13 +27,13 @@ class ProgressUpdateHandler(ABC):
     Abstract base class for progress update handlers.
 
     Example usage:
-    >>> from neptune_fetcher import FrozenProject
+    >>> from neptune_fetcher import ReadOnlyProject
     >>> from neptune_fetcher.progress_update_handler import ProgressUpdateHandler
 
     >>> class CustomProgressUpdateHandler(ProgressUpdateHandler):
     >>>     ...  # overwrite the methods you need
 
-    >>> project = FrozenProject(...)
+    >>> project = ReadOnlyProject(...)
     >>> project.progress_indicator(CustomProgressUpdateHandler())  # use your custom handler to track progress
     """
 
