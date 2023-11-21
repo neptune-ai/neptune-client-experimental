@@ -21,5 +21,5 @@ from neptune.internal.websockets.websocket_signals_background_job import Websock
 def test_disabled_remote_signals():
     with Run(mode="debug", enable_remote_signals=False) as run:
         assert run._enable_remote_signals is False
-        jobs = run._prepare_background_jobs()._jobs
+        jobs = run._get_background_jobs()
         assert not [job for job in jobs if isinstance(job, WebsocketSignalsBackgroundJob)]

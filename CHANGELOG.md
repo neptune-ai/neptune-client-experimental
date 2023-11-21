@@ -2,6 +2,8 @@
 
 ### Changes
 - Added support for download progress update handling in fetching API ([#25](https://github.com/neptune-ai/neptune-client-experimental/pull/25))
+- Adjustments after no synchronization callbacks fix ([#20](https://github.com/neptune-ai/neptune-client-experimental/pull/20))
+- Renamed methods in `ProgressUpdateHandler` ([#26](https://github.com/neptune-ai/neptune-client-experimental/pull/26))
 
 
 ## neptune-experimental 0.2.0

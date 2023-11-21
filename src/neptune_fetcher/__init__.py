@@ -14,9 +14,9 @@
 # limitations under the License.
 #
 __all__ = [
-    "FrozenProject",
+    "ReadOnlyProject",
     "ProgressUpdateHandler",
 ]
 
-from .frozen_project import FrozenProject
 from .progress_update_handler import ProgressUpdateHandler
+from .read_only_project import ReadOnlyProject

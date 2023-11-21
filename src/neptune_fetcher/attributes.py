@@ -103,7 +103,7 @@ class Series(ABC, Generic[T]):
                 row["timestamp"] = datetime.fromtimestamp(entry.timestampMillis / 1000)
             return row
 
-        backend.progress_update_handler.series_setup(val.totalItemCount, limit)
+        backend.progress_update_handler.pre_series_fetch(val.totalItemCount, limit)
         while offset < val.totalItemCount:
             batch = self._fetch_values_from_backend(backend, container_id, container_type, path, offset, limit)
             data.extend(batch.values)
