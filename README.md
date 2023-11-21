@@ -14,14 +14,15 @@ pip install --upgrade neptune neptune-experimental
 ## Usage
 
 ### Importing
+
 ```python
 from neptune_fetcher import (
-    FrozenProject, ProgressUpdateHandler
+    ReadOnlyProject, ProgressUpdateHandler
 )
 ```
 
 ### Overview of Classes
-- `FrozenProject`: A lightweight, read-only class for handling basic project information.
+- `ReadOnlyProject`: A lightweight, read-only class for handling basic project information.
     - _Constructor Parameters_:
         - `project`: Optional string specifying the project name.
         - `workspace`: Optional string specifying the workspace.
@@ -29,12 +30,12 @@ from neptune_fetcher import (
         - `proxies`: Optional dictionary for proxy configuration.
     - _Methods_:
         - `list_runs()`: Yields dictionaries with basic information about each run, including `sys/id` and `sys/name`.
-        - `fetch_frozen_runs(with_ids: List[str])`: Returns a generator for `FrozenRun` instances for specified run IDs.
+        - `fetch_read_only_runs(with_ids: List[str])`: Returns a generator for `ReadOnlyRun` instances for specified run IDs.
         - `fetch_runs()`: Fetches runs as a DataFrame with default columns.
         - `progress_indicator(handler: Union[ProgressUpdateHandler, bool])`: Sets a progress indicator.
         - `fetch_runs_df(columns, with_ids, states, owners, tags, trashed)`: Fetches runs as a DataFrame based on specified filters.
 
-- _`FrozenProject.FrozenRun`_: Represents a single Neptune run with read-only access.
+- _`ReadOnlyProject.ReadOnlyRun`_: Represents a single Neptune run with read-only access.
     - _Methods_:
         - `__getitem__(item)`: Accesses a field by its path.
         - `__delitem__(key)`: Removes a field from the local cache.
@@ -43,39 +44,41 @@ from neptune_fetcher import (
 
 - `ProgressUpdateHandler`: Handles feedback presentation during data fetching.
     - _Method Overriding_:
-        - `series_setup(total_series: int, series_limit: int)`: Sets up a progress bar for series fetching.
+        - `pre_series_fetch(total_series: int, series_limit: int)`: Sets up a progress bar for series fetching.
         - `on_series_fetch(step: int)`: On every step in the series fetching process.
         - `post_series_fetch()`: After series fetching is completed should clean up the resources.
-        - `table_setup()`: Initializes a progress bar for table fetching.
-        - `on_run_table_fetch(step: int)`: On every step in the table fetching process.
-        - `post_table_fetch()`: After table fetching is completed should clean up the resources.
+        - `pre_runs_table_fetch()`: Initializes a progress bar for table fetching.
+        - `on_runs_table_fetch(step: int)`: On every step in the table fetching process.
+        - `post_runs_table_fetch()`: After table fetching is completed should clean up the resources.
         - `pre_download(total_size: int)`: Sets up tracking of download process.
         - `on_download_chunk(chunk: int)`: On every step of the download process.
         - `post_download()`: After the download process is completed should clean up the resources.
+
 
 ## Examples
 ### Fetching Project Metadata
 
 ```python
-from neptune_fetcher import FrozenProject
+from neptune_fetcher import ReadOnlyProject
 
-project = FrozenProject(workspace="some", project="project")
+project = ReadOnlyProject(workspace="some", project="project")
 ```
 
 ### Listing Runs in a Project
 
 ```python
-from neptune_fetcher import FrozenProject
+from neptune_fetcher import ReadOnlyProject
 
-project = FrozenProject(workspace="some", project="project")
+project = ReadOnlyProject(workspace="some", project="project")
 ids = list(map(lambda row: row["sys/id"], project.list_runs()))
 ```
 
 ### Filtering and Processing Runs
 
 ```python
-from neptune_fetcher import FrozenProject
-project = FrozenProject(workspace="some", project="project")
+from neptune_fetcher import ReadOnlyProject
+
+project = ReadOnlyProject(workspace="some", project="project")
 df = project.fetch_runs_df()
 
 matches = df["sys/name"].str.match("metrics.*")
@@ -85,10 +88,10 @@ ids = df[matches]["sys/id"]
 ### Iterating Over Runs
 
 ```python
-from neptune_fetcher import FrozenProject
+from neptune_fetcher import ReadOnlyProject
 
-project = FrozenProject(workspace="some", project="project")
-for run in project.fetch_frozen_runs(with_ids=["PROJ-2"]):
+project = ReadOnlyProject(workspace="some", project="project")
+for run in project.fetch_read_only_runs(with_ids=["PROJ-2"]):
     for field in run.field_names:
         if field.startswith("param"):
             print(run[field].fetch())
@@ -114,8 +117,9 @@ del run["metric1"]
 Use the default progress indicator:
 
 ```python
-from neptune_fetcher import FrozenProject
-project = FrozenProject(workspace="some", project="project")
+from neptune_fetcher import ReadOnlyProject
+
+project = ReadOnlyProject(workspace="some", project="project")
 project.progress_indicator(True)
 ```
 
@@ -124,20 +128,22 @@ or define your own progress indicator by inheriting from `ProgressUpdateHandler`
 ```python
 from neptune_fetcher import (
     ProgressUpdateHandler,
-    FrozenProject,
+    ReadOnlyProject,
 )
 
+
 class MyProgressIndicator(ProgressUpdateHandler):
-    def table_setup(self):
+    def pre_runs_table_fetch(self):
         pass
 
-    def on_run_table_fetch(self, step: int):
+    def on_runs_table_fetch(self, step: int):
         print(f"Fetching runs table, step {step}")
 
-    def post_table_fetch(self):
+    def post_runs_table_fetch(self):
         pass
 
-project = FrozenProject("some/project")
+
+project = ReadOnlyProject("some/project")
 project.progress_indicator(MyProgressIndicator())
 df = project.fetch_runs_df()
 ```
