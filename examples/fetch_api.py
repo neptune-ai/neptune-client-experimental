@@ -1,3 +1,19 @@
+#
+# Copyright (c) 2023, Neptune Labs Sp. z o.o.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 from neptune import Run
 
 from neptune_fetcher import FrozenProject
@@ -29,17 +45,22 @@ def main():
     print("Run info list:\n", run_info, "\n###########################################\n")
 
     run = next(project.fetch_frozen_runs([run_id]))
+
+    # For demonstration purpose only, you should not access this field directly on rely on its existence
     print("Run structure:\n", run._structure, "\n###########################################\n")
 
+    # For demonstration purpose only, you should not access this field directly on rely on its existence
     print("Cache before prefetching:\n", run._cache, "\n###########################################\n")
     run.prefetch(["sys/id", "source_code/entrypoint", "params/lr"])
+
+    # For demonstration purpose only, you should not access this field directly on rely on its existence
     print("Cache after prefetching:\n", run._cache, "\n###########################################\n")
 
-    # purging local cache
+    # Purge local cache
     del run["params/lr"]
     print("Cache after purge:\n", run._cache, "\n###########################################\n")
 
-    # Fetching single field
+    # Fetch single field
     lr = run["params/lr"].fetch()
     print("Learning rate:\n", lr, "\n###########################################\n")
 
