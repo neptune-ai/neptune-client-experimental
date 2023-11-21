@@ -16,7 +16,7 @@
 
 from neptune import Run
 
-from neptune_fetcher import FrozenProject
+from neptune_fetcher import ReadOnlyProject
 
 PROJECT = "<PROJECT HERE>"
 WORKSPACE = "<WORKSPACE HERE>"
@@ -39,12 +39,12 @@ def main():
     run_id = create_neptune_run()
 
     print("Run created. Now let's use the new fetcher API")
-    project = FrozenProject(workspace=WORKSPACE, project=PROJECT)
+    project = ReadOnlyProject(workspace=WORKSPACE, project=PROJECT)
 
     run_info = list(project.list_runs())
     print("Run info list:\n", run_info, "\n###########################################\n")
 
-    run = next(project.fetch_frozen_runs([run_id]))
+    run = next(project.fetch_read_only_runs([run_id]))
 
     # For demonstration purpose only, you should not access this field directly on rely on its existence
     print("Run structure:\n", run._structure, "\n###########################################\n")
