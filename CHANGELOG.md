@@ -1,4 +1,4 @@
-## [UNRELEASED] neptune-experimental 0.2.1
+## neptune-experimental 0.2.1
 
 ### Changes
 - Added support for download progress update handling in fetching API ([#25](https://github.com/neptune-ai/neptune-client-experimental/pull/25))
