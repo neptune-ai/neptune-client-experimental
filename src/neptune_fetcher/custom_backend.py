@@ -23,17 +23,26 @@ from typing import (
 )
 
 from bravado.exception import HTTPNotFound
-from neptune.exceptions import ContainerUUIDNotFound
+from neptune.common.exceptions import ClientHttpError
+from neptune.exceptions import (
+    ContainerUUIDNotFound,
+    FetchAttributeNotFoundException,
+)
 from neptune.internal.backends.api_model import (
     Attribute,
     AttributeType,
 )
 from neptune.internal.backends.hosted_client import DEFAULT_REQUEST_KWARGS
+from neptune.internal.backends.hosted_file_operations import (
+    download_file_attribute,
+    download_file_set_attribute,
+)
 from neptune.internal.backends.hosted_neptune_backend import (
     HostedNeptuneBackend,
     _logger,
 )
 from neptune.internal.container_type import ContainerType
+from neptune.internal.utils.paths import path_to_str
 
 from neptune_fetcher.attributes import (
     Attr,
@@ -73,6 +82,52 @@ class CustomBackend(HostedNeptuneBackend):
         self.progress_update_handler: ProgressUpdateHandler = (
             progress_update_handler if progress_update_handler else NullProgressUpdateHandler()
         )
+
+    def download_file(
+        self,
+        container_id: str,
+        container_type: ContainerType,
+        path: List[str],
+        destination: Optional[str] = None,
+    ) -> None:
+        try:
+            download_file_attribute(
+                swagger_client=self.leaderboard_client,
+                container_id=container_id,
+                attribute=path_to_str(path),
+                destination=destination,
+                pre_download_hook=self.progress_update_handler.pre_download,
+                download_iter_hook=self.progress_update_handler.on_download_chunk,
+                post_download_hook=self.progress_update_handler.post_download,
+            )
+        except ClientHttpError as e:
+            if e.status == HTTPNotFound.status_code:
+                raise FetchAttributeNotFoundException(path_to_str(path))
+            else:
+                raise
+
+    def download_file_set(
+        self,
+        container_id: str,
+        container_type: ContainerType,
+        path: List[str],
+        destination: Optional[str] = None,
+    ) -> None:
+        download_request = self._get_file_set_download_request(container_id, container_type, path)
+        try:
+            download_file_set_attribute(
+                swagger_client=self.leaderboard_client,
+                download_id=download_request.id,
+                destination=destination,
+                pre_download_hook=self.progress_update_handler.pre_download,
+                download_iter_hook=self.progress_update_handler.on_download_chunk,
+                post_download_hook=self.progress_update_handler.post_download,
+            )
+        except ClientHttpError as e:
+            if e.status == HTTPNotFound.status_code:
+                raise FetchAttributeNotFoundException(path_to_str(path))
+            else:
+                raise
 
     def get_attributes(self, container_id: str, container_type: ContainerType) -> List[Attribute]:
         params = {
