@@ -71,7 +71,6 @@ ATOMS = {
     AttributeType.BOOL,
     AttributeType.DATETIME,
     AttributeType.STRING,
-    AttributeType.FILE,
     AttributeType.GIT_REF,
     AttributeType.RUN_STATE,
     AttributeType.ARTIFACT,
