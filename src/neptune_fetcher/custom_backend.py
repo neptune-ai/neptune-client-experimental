@@ -126,11 +126,11 @@ class CustomBackend(HostedNeptuneBackend):
         max_server_offset = 10000
         items = []
         previous_items = None
-        self.progress_update_handler.table_setup()
+        self.progress_update_handler.pre_run_table_fetch()
         while (previous_items is None or len(previous_items) >= step) and len(items) < max_server_offset:
             previous_items = get_portion(limit=step, offset=len(items))
             items += previous_items
             # We don't know the size apriori
             self.progress_update_handler.on_run_table_fetch(step)
-        self.progress_update_handler.post_table_fetch()
+        self.progress_update_handler.post_run_table_fetch()
         return items
