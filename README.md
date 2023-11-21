@@ -22,7 +22,7 @@ from neptune_fetcher import (
 ```
 
 ### Overview of Classes
-- `FrozenProject`: A lightweight, read-only class for handling basic project information.
+- `ReadOnlyProject`: A lightweight, read-only class for handling basic project information.
     - _Constructor Parameters_:
         - `project`: Optional string specifying the project name.
         - `workspace`: Optional string specifying the workspace.
@@ -30,12 +30,12 @@ from neptune_fetcher import (
         - `proxies`: Optional dictionary for proxy configuration.
     - _Methods_:
         - `list_runs()`: Yields dictionaries with basic information about each run, including `sys/id` and `sys/name`.
-        - `fetch_frozen_runs(with_ids: List[str])`: Returns a generator for `FrozenRun` instances for specified run IDs.
+        - `fetch_read_only_runs(with_ids: List[str])`: Returns a generator for `ReadOnlyRun` instances for specified run IDs.
         - `fetch_runs()`: Fetches runs as a DataFrame with default columns.
         - `progress_indicator(handler: Union[ProgressUpdateHandler, bool])`: Sets a progress indicator.
         - `fetch_runs_df(columns, with_ids, states, owners, tags, trashed)`: Fetches runs as a DataFrame based on specified filters.
 
-- _`FrozenProject.FrozenRun`_: Represents a single Neptune run with read-only access.
+- _`ReadOnlyProject.ReadOnlyRun`_: Represents a single Neptune run with read-only access.
     - _Methods_:
         - `__getitem__(item)`: Accesses a field by its path.
         - `__delitem__(key)`: Removes a field from the local cache.
