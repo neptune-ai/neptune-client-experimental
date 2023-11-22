@@ -18,21 +18,26 @@ __all__ = ["initialize"]
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
+    Optional,
 )
 
 from neptune_experimental.utils import wrap_method
 
 if TYPE_CHECKING:
-    from neptune.internal.backends.api_model import ApiExperiment
     from neptune.metadata_containers import Run
 
 
 def initialize() -> None:
     from neptune import Run
 
-    wrap_method(obj=Run, method="_post_run_creation_action", wrapper=custom_post_run_creation_action)
+    wrap_method(obj=Run, method="__init__", wrapper=custom_init)
 
 
-def custom_post_run_creation_action(self: "Run", run: "ApiExperiment", *args: Any, **kwargs: Any) -> None:
-    if self._name is None:
-        self._name = run.sys_id
+def custom_init(
+    self: "Run", *args: Any, original: Callable[..., Any], name: Optional[str] = None, **kwargs: Any
+) -> None:
+    original(self, *args, name=name, **kwargs)
+    if name is None:
+        self._name = self._api_object.sys_id
+        self["sys/name"] = self._name
