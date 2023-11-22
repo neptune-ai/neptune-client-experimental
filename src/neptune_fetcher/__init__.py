@@ -13,13 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+__all__ = [
+    "ReadOnlyProject",
+    "ProgressUpdateHandler",
+]
 
-from neptune import Run
-from neptune.internal.websockets.websocket_signals_background_job import WebsocketSignalsBackgroundJob
-
-
-def test_disabled_remote_signals():
-    with Run(mode="debug", enable_remote_signals=False) as run:
-        assert run._enable_remote_signals is False
-        jobs = run._get_background_jobs()
-        assert not [job for job in jobs if isinstance(job, WebsocketSignalsBackgroundJob)]
+from .progress_update_handler import ProgressUpdateHandler
+from .read_only_project import ReadOnlyProject

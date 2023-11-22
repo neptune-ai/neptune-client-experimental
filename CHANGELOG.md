@@ -1,7 +1,21 @@
-## [UNRELEASED] neptune-experimental 0.2.0
+## [UNRELEASED] neptune-experimental 0.3.0
 
 ### Features
 - Added default run name handling ([#18](https://github.com/neptune-ai/neptune-client-experimental/pull/18))
+
+
+## neptune-experimental 0.2.1
+
+### Changes
+- Added support for download progress update handling in fetching API ([#25](https://github.com/neptune-ai/neptune-client-experimental/pull/25))
+- Adjustments after no synchronization callbacks fix ([#20](https://github.com/neptune-ai/neptune-client-experimental/pull/20))
+- Renamed methods in `ProgressUpdateHandler` ([#26](https://github.com/neptune-ai/neptune-client-experimental/pull/26))
+
+
+## neptune-experimental 0.2.0
+
+### Features
+- Added fetching API ([#19](https://github.com/neptune-ai/neptune-client-experimental/pull/19))
 
 
 ## neptune-experimental 0.1.0
