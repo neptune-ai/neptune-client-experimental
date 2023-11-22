@@ -19,7 +19,4 @@ from neptune.metadata_containers import run
 
 
 def initialize() -> None:
-    from icecream import ic
-
-    ic("HERE")
     run.DEFAULT_NAME = None
