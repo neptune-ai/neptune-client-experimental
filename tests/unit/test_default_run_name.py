@@ -15,6 +15,8 @@
 #
 
 import neptune
+import pytest
+from neptune.exceptions import MissingFieldException
 
 
 def test_default_run_name():
@@ -22,7 +24,8 @@ def test_default_run_name():
         run.sync()
         sys_id = run["sys/id"].fetch()
         assert sys_id is not None
-        assert run["sys/name"].fetch() == sys_id
+        with pytest.raises(MissingFieldException):
+            run["sys/name"].fetch()
 
     with neptune.init_run(name="Something", mode="debug") as run2:
         run2.sync()
