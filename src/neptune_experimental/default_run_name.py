@@ -15,29 +15,11 @@
 #
 __all__ = ["initialize"]
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Optional,
-)
-
-from neptune_experimental.utils import wrap_method
-
-if TYPE_CHECKING:
-    from neptune.metadata_containers import Run
+from neptune.metadata_containers import run
 
 
 def initialize() -> None:
-    from neptune import Run
+    from icecream import ic
 
-    wrap_method(obj=Run, method="__init__", wrapper=custom_init)
-
-
-def custom_init(
-    self: "Run", *args: Any, original: Callable[..., Any], name: Optional[str] = None, **kwargs: Any
-) -> None:
-    original(self, *args, name=name, **kwargs)
-    if name is None:
-        self._name = self._api_object.sys_id
-        self["sys/name"] = self._name
+    ic("HERE")
+    run.DEFAULT_NAME = None
