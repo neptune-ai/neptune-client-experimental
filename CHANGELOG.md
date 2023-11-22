@@ -1,3 +1,8 @@
+## [UNRELEASED] neptune-experimental 0.2.2
+
+### Changes
+- Add custom units and descriptions to tqdm progress bars ([#29](https://github.com/neptune-ai/neptune-client-experimental/pull/29))
+
 ## neptune-experimental 0.2.1
 
 ### Changes
