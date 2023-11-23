@@ -17,6 +17,7 @@
 from neptune import Run
 
 from neptune_fetcher import ReadOnlyProject
+from neptune_fetcher.read_only_run import ReadOnlyRun
 
 PROJECT = "<PROJECT HERE>"
 WORKSPACE = "<WORKSPACE HERE>"
@@ -44,7 +45,7 @@ def main():
     run_info = list(project.list_runs())
     print("Run info list:\n", run_info, "\n###########################################\n")
 
-    run = next(project.fetch_read_only_runs([run_id]))
+    run = ReadOnlyRun(project=project, with_id=run_id)
 
     # For demonstration purpose only, you should not access this field directly on rely on its existence
     print("Run structure:\n", run._structure, "\n###########################################\n")
