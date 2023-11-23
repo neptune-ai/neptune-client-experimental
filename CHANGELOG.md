@@ -5,6 +5,7 @@
 
 ### Changes
 - Add custom units and descriptions to tqdm progress bars ([#29](https://github.com/neptune-ai/neptune-client-experimental/pull/29))
+- Increased default step size when fetching runs ([#30](https://github.com/neptune-ai/neptune-client-experimental/pull/30))
 
 
 ## neptune-experimental 0.2.1
