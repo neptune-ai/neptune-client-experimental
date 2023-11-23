@@ -186,6 +186,6 @@ class CustomBackend(HostedNeptuneBackend):
             previous_items = get_portion(limit=step, offset=len(items))
             items += previous_items
             # We don't know the size apriori
-            self.progress_update_handler.on_runs_table_fetch(step)
+            self.progress_update_handler.on_runs_table_fetch(len(previous_items))
         self.progress_update_handler.post_runs_table_fetch()
         return items

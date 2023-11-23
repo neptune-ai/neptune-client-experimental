@@ -98,24 +98,22 @@ class DefaultProgressUpdateHandler(ProgressUpdateHandler):
     def pre_series_fetch(self, total_series: int, series_limit: int) -> None:
         from tqdm import tqdm
 
-        self._series_bar = tqdm(total=total_series)
+        self._series_bar = tqdm(total=total_series, desc="Fetching series values", unit=" steps")
         self._series_bar.update(n=series_limit)
 
     def pre_runs_table_fetch(self) -> None:
         from tqdm import tqdm
 
-        self._table_bar = tqdm()
+        self._table_bar = tqdm(desc="Fetching runs", unit=" runs")
 
     def on_series_fetch(self, step: int) -> None:
         self._series_bar.update(n=step)
-        self._series_bar.set_description("Fetching series values")
 
     def post_series_fetch(self) -> None:
         self._series_bar.close()
 
     def on_runs_table_fetch(self, step: int) -> None:
         self._table_bar.update(n=step)
-        self._table_bar.set_description("Fetching runs")
 
     def post_runs_table_fetch(self) -> None:
         self._table_bar.close()
@@ -123,11 +121,10 @@ class DefaultProgressUpdateHandler(ProgressUpdateHandler):
     def pre_download(self, total_size: int) -> None:
         from tqdm import tqdm
 
-        self._download_bar = tqdm(total=total_size)
+        self._download_bar = tqdm(total=total_size, desc="Downloading file", unit="B", unit_scale=True)
 
     def on_download_chunk(self, chunk: int) -> None:
         self._download_bar.update(n=chunk)
-        self._download_bar.set_description("Downloading file")
 
     def post_download(self) -> None:
         self._download_bar.close()
