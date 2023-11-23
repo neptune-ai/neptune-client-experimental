@@ -15,6 +15,7 @@
 #
 __all__ = ["CustomBackend"]
 
+import os
 from typing import (
     Any,
     Dict,
@@ -24,6 +25,7 @@ from typing import (
 
 from bravado.exception import HTTPNotFound
 from neptune.common.exceptions import ClientHttpError
+from neptune.envs import NEPTUNE_FETCH_TABLE_STEP_SIZE
 from neptune.exceptions import (
     ContainerUUIDNotFound,
     FetchAttributeNotFoundException,
@@ -179,6 +181,7 @@ class CustomBackend(HostedNeptuneBackend):
 
     def _get_all_items(self, get_portion, step):
         max_server_offset = 10000
+        step = int(os.getenv(NEPTUNE_FETCH_TABLE_STEP_SIZE, "1000"))
         items = []
         previous_items = None
         self.progress_update_handler.pre_runs_table_fetch()
