@@ -65,6 +65,7 @@ packages = [
 "experimental_incremental_batch_size" = "neptune_experimental.incremental_batch_size:initialize"
 "experimental_safe_mode" = "neptune_experimental.safe_mode:initialize"
 "experimental_partitioned_operation_processor" = "neptune_experimental.partitioned_op_initialization:initialize"
+"experimental_default_run_name" = "neptune_experimental.default_run_name:initialize"
 
 [tool.poetry.urls]
 "Tracker" = "https://github.com/neptune-ai/neptune-client-experimental/issues"
