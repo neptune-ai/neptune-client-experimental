@@ -20,7 +20,6 @@ from neptune_fetcher import ReadOnlyProject
 from neptune_fetcher.read_only_run import ReadOnlyRun
 
 PROJECT = "<PROJECT HERE>"
-WORKSPACE = "<WORKSPACE HERE>"
 
 
 def create_neptune_run() -> str:
@@ -40,13 +39,13 @@ def main():
     run_id = create_neptune_run()
 
     print("Run created. Now let's use the new fetcher API")
-    project = ReadOnlyProject(workspace=WORKSPACE, project=PROJECT)
+    project = ReadOnlyProject(project=PROJECT)
 
     # Track progress update
     project.progress_indicator(True)
 
     run_info = list(project.list_runs())
-    print("Run info list:\n", run_info, "\n###########################################\n")
+    print("Run info list:\n", run_info[:10], "\n###########################################\n")
 
     run = ReadOnlyRun(project=project, with_id=run_id)
 
@@ -75,7 +74,10 @@ def main():
     print("Last item in string series:\n", last, "\n###########################################\n")
 
     # Fetch runs table
-    run_df = project.fetch_runs_df(columns=["sys/id", "sys/name", "sys/owner"], with_ids=[run_id])
+    run_df = project.fetch_runs_df(
+        columns=["sys/id", "sys/name", "sys/owner"],
+        with_ids=[_id for _id in list(map(lambda x: x["sys/id"], run_info[:10]))],
+    )
     print("Runs dataframe:\n", run_df, "\n###########################################\n")
 
     # Download file
