@@ -16,23 +16,33 @@
 __all__ = ["CustomBackend"]
 
 import os
+from functools import partial
 from typing import (
     Any,
     Dict,
+    Iterable,
     List,
     Optional,
 )
 
 from bravado.exception import HTTPNotFound
+from neptune.api.searching_entries import (
+    get_single_page,
+    iter_over_pages,
+    to_leaderboard_entry,
+)
+from neptune.common.backends.utils import with_api_exceptions_handler
 from neptune.common.exceptions import ClientHttpError
 from neptune.envs import NEPTUNE_FETCH_TABLE_STEP_SIZE
 from neptune.exceptions import (
     ContainerUUIDNotFound,
     FetchAttributeNotFoundException,
+    ProjectNotFound,
 )
 from neptune.internal.backends.api_model import (
     Attribute,
     AttributeType,
+    LeaderboardEntry,
 )
 from neptune.internal.backends.hosted_client import DEFAULT_REQUEST_KWARGS
 from neptune.internal.backends.hosted_file_operations import (
@@ -43,7 +53,9 @@ from neptune.internal.backends.hosted_neptune_backend import (
     HostedNeptuneBackend,
     _logger,
 )
+from neptune.internal.backends.nql import NQLQuery
 from neptune.internal.container_type import ContainerType
+from neptune.internal.id_formats import UniqueId
 from neptune.internal.utils.paths import path_to_str
 
 from neptune_fetcher.attributes import (
@@ -179,16 +191,39 @@ class CustomBackend(HostedNeptuneBackend):
 
         return {dto.name: get_attribute_from_dto(dto) for dto in result.attributes}
 
-    def _get_all_items(self, get_portion, step):
-        max_server_offset = 10000
-        step = int(os.getenv(NEPTUNE_FETCH_TABLE_STEP_SIZE, "1000"))
-        items = []
-        previous_items = None
-        self.progress_update_handler.pre_runs_table_fetch()
-        while (previous_items is None or len(previous_items) >= step) and len(items) < max_server_offset:
-            previous_items = get_portion(limit=step, offset=len(items))
-            items += previous_items
-            # We don't know the size apriori
-            self.progress_update_handler.on_runs_table_fetch(len(previous_items))
-        self.progress_update_handler.post_runs_table_fetch()
-        return items
+    @with_api_exceptions_handler
+    def search_leaderboard_entries(
+        self,
+        project_id: UniqueId,
+        types: Optional[Iterable[ContainerType]] = None,
+        query: Optional[NQLQuery] = None,
+        columns: Optional[Iterable[str]] = None,
+    ) -> List[LeaderboardEntry]:
+        step_size = int(os.getenv(NEPTUNE_FETCH_TABLE_STEP_SIZE, "1000"))
+
+        types_filter = list(map(lambda container_type: container_type.to_api(), types)) if types else None
+        query_params = {"query": {"query": str(query)}} if query else {}
+        attributes_filter = {"attributeFilters": [{"path": column} for column in columns]} if columns else {}
+
+        try:
+            items = []
+            self.progress_update_handler.pre_runs_table_fetch()
+
+            for entry in iter_over_pages(
+                iter_once=partial(
+                    get_single_page,
+                    client=self.leaderboard_client,
+                    project_id=project_id,
+                    types=types_filter,
+                    query_params=query_params,
+                    attributes_filter=attributes_filter,
+                ),
+                step=step_size,
+            ):
+                items.append(to_leaderboard_entry(entry=entry))
+                self.progress_update_handler.on_runs_table_fetch(1)
+
+            self.progress_update_handler.post_runs_table_fetch()
+            return items
+        except HTTPNotFound:
+            raise ProjectNotFound(project_id)
