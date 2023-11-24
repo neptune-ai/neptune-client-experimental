@@ -47,7 +47,7 @@ def main():
     run_info = list(project.list_runs())
     print("Run info list:\n", run_info[:10], "\n###########################################\n")
 
-    run = ReadOnlyRun(project=project, with_id=run_id)
+    run = ReadOnlyRun(read_only_project=project, with_id=run_id)
 
     # For demonstration purpose only, you should not access this field directly on rely on its existence
     print("Run structure:\n", run._structure, "\n###########################################\n")
@@ -76,7 +76,7 @@ def main():
     # Fetch runs table
     run_df = project.fetch_runs_df(
         columns=["sys/id", "sys/name", "sys/owner"],
-        with_ids=[_id for _id in list(map(lambda x: x["sys/id"], run_info[:10]))],
+        with_ids=[run["sys/id"] for run in run_info[:10]],
     )
     print("Runs dataframe:\n", run_df, "\n###########################################\n")
 

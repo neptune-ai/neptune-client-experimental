@@ -27,6 +27,7 @@ from typing import (
 
 from neptune.internal.container_type import ContainerType
 from neptune.internal.id_formats import QualifiedName
+from neptune.internal.utils import verify_type
 from neptune.metadata_containers.metadata_containers_table import TableEntry
 
 from neptune_fetcher.fetchable import (
@@ -48,9 +49,12 @@ def _get_attribute(entry: TableEntry, name: str) -> Optional[str]:
 
 
 class ReadOnlyRun:
-    def __init__(self, project: "ReadOnlyProject", with_id: Optional[str] = None):
-        self.project = project
+    def __init__(self, read_only_project: "ReadOnlyProject", with_id: str) -> None:
+        self.project = read_only_project
         self.with_id = with_id
+
+        verify_type("with_id", with_id, str)
+
         self._container_id = QualifiedName(f"{self.project.project_identifier}/{with_id}")
         self._cache = dict()
         self._structure = {
