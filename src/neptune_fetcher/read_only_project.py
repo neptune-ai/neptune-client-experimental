@@ -23,6 +23,7 @@ from typing import (
     Dict,
     Generator,
     Iterable,
+    List,
     Optional,
     Union,
 )
@@ -38,6 +39,7 @@ from neptune.internal.id_formats import (
     UniqueId,
     conform_optional,
 )
+from neptune.management.internal.utils import normalize_project_name
 from neptune.metadata_containers.metadata_containers_table import Table
 from neptune.metadata_containers.utils import prepare_nql_query
 
@@ -47,7 +49,10 @@ from neptune_fetcher.progress_update_handler import (
     NullProgressUpdateHandler,
     ProgressUpdateHandler,
 )
-from neptune_fetcher.read_only_run import _get_attribute
+from neptune_fetcher.read_only_run import (
+    ReadOnlyRun,
+    _get_attribute,
+)
 
 if TYPE_CHECKING:
     from pandas import DataFrame
@@ -85,6 +90,9 @@ class ReadOnlyProject:
             backend=self._backend, name=self._project_qualified_name
         )
         self._project_id: UniqueId = self._project_api_object.id
+        self.project_identifier = normalize_project_name(
+            name=self._project, workspace=self._project_api_object.workspace
+        )
 
     def list_runs(self) -> Generator[Dict[str, Optional[str]], None, None]:
         """Lists IDs and names of the runs in the project.
@@ -105,6 +113,17 @@ class ReadOnlyProject:
                 "sys/id": _get_attribute(entry=row, name="sys/id"),
                 "sys/name": _get_attribute(entry=row, name="sys/name"),
             }
+
+    def fetch_read_only_runs(self, with_ids: List[str]) -> Generator[ReadOnlyRun, None, None]:
+        """Lists runs of the project in the form of read-only runs.
+
+        Returns a generator of `ReadOnlyProject.ReadOnlyRun` instances.
+
+        Args:
+            with_ids: List of run ids to fetch.
+        """
+        for run_id in with_ids:
+            yield ReadOnlyRun(project=self, with_id=run_id)
 
     def fetch_runs(self) -> "DataFrame":
         """Fetches a table containing IDs and names of runs in the project.
