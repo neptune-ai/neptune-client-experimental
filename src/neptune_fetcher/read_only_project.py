@@ -17,6 +17,7 @@ __all__ = [
     "ReadOnlyProject",
 ]
 
+import os
 from typing import (
     TYPE_CHECKING,
     Dict,
@@ -24,11 +25,11 @@ from typing import (
     Iterable,
     List,
     Optional,
-    TypeVar,
     Union,
 )
 
 from neptune import Project
+from neptune.envs import PROJECT_ENV_NAME
 from neptune.internal.backends.nql import NQLEmptyQuery
 from neptune.internal.backends.project_name_lookup import project_name_lookup
 from neptune.internal.container_type import ContainerType
@@ -36,38 +37,25 @@ from neptune.internal.credentials import Credentials
 from neptune.internal.id_formats import (
     QualifiedName,
     UniqueId,
+    conform_optional,
 )
 from neptune.management.internal.utils import normalize_project_name
-from neptune.metadata_containers.metadata_containers_table import (
-    Table,
-    TableEntry,
-)
+from neptune.metadata_containers.metadata_containers_table import Table
 from neptune.metadata_containers.utils import prepare_nql_query
 
 from neptune_fetcher.custom_backend import CustomBackend
-from neptune_fetcher.fetchable import (
-    Downloadable,
-    Fetchable,
-    FetchableSeries,
-    which_fetchable,
-)
 from neptune_fetcher.progress_update_handler import (
     DefaultProgressUpdateHandler,
     NullProgressUpdateHandler,
     ProgressUpdateHandler,
 )
+from neptune_fetcher.read_only_run import (
+    ReadOnlyRun,
+    _get_attribute,
+)
 
 if TYPE_CHECKING:
     from pandas import DataFrame
-
-T = TypeVar("T")
-
-
-def _get_attribute(entry: TableEntry, name: str) -> Optional[str]:
-    try:
-        return entry.get_attribute_value(name)
-    except ValueError:
-        return None
 
 
 class ReadOnlyProject:
@@ -76,7 +64,6 @@ class ReadOnlyProject:
     def __init__(
         self,
         project: Optional[str] = None,
-        workspace: Optional[str] = None,
         api_token: Optional[str] = None,
         proxies: Optional[dict] = None,
     ) -> None:
@@ -87,19 +74,25 @@ class ReadOnlyProject:
 
         Args:
             project: The name of the Neptune project.
-            workspace: The workspace associated with the project.
             api_token: Neptune account's API token.
                 If left empty, the value of the NEPTUNE_API_TOKEN environment variable is used (recommended).
             proxies: A dictionary of proxy settings if needed.
         """
-        self._project: Optional[str] = project
+        self._project: Optional[str] = project if project else os.getenv(PROJECT_ENV_NAME)
+        if self._project is None:
+            raise Exception("Could not find project name in env")
+
         self._backend: CustomBackend = CustomBackend(
             credentials=Credentials.from_token(api_token=api_token), proxies=proxies
         )
-
-        self.project_identifier = normalize_project_name(name=project, workspace=workspace)
-        self._project_api_object: Project = project_name_lookup(backend=self._backend, name=self.project_identifier)
+        self._project_qualified_name: Optional[str] = conform_optional(self._project, QualifiedName)
+        self._project_api_object: Project = project_name_lookup(
+            backend=self._backend, name=self._project_qualified_name
+        )
         self._project_id: UniqueId = self._project_api_object.id
+        self.project_identifier = normalize_project_name(
+            name=self._project, workspace=self._project_api_object.workspace
+        )
 
     def list_runs(self) -> Generator[Dict[str, Optional[str]], None, None]:
         """Lists IDs and names of the runs in the project.
@@ -121,7 +114,7 @@ class ReadOnlyProject:
                 "sys/name": _get_attribute(entry=row, name="sys/name"),
             }
 
-    def fetch_read_only_runs(self, with_ids: List[str]) -> Generator["ReadOnlyProject.ReadOnlyRun", None, None]:
+    def fetch_read_only_runs(self, with_ids: List[str]) -> Generator[ReadOnlyRun, None, None]:
         """Lists runs of the project in the form of read-only runs.
 
         Returns a generator of `ReadOnlyProject.ReadOnlyRun` instances.
@@ -130,9 +123,7 @@ class ReadOnlyProject:
             with_ids: List of run ids to fetch.
         """
         for run_id in with_ids:
-            yield ReadOnlyProject.ReadOnlyRun(
-                project=self, container_id=QualifiedName(f"{self.project_identifier}/{run_id}")
-            )
+            yield ReadOnlyRun(project=self, with_id=run_id)
 
     def fetch_runs(self) -> "DataFrame":
         """Fetches a table containing IDs and names of runs in the project.
@@ -218,41 +209,3 @@ class ReadOnlyProject:
             container_type=ContainerType.RUN,
             entries=leaderboard_entries,
         ).to_pandas()
-
-    class ReadOnlyRun:
-        def __init__(self, project: "ReadOnlyProject", container_id: QualifiedName) -> None:
-            self._container_id = container_id
-            self.project = project
-            self._cache = dict()
-            self._structure = {
-                attribute.path: which_fetchable(
-                    attribute,
-                    self.project._backend,
-                    self._container_id,
-                    self._cache,
-                )
-                for attribute in self.project._backend.get_attributes(self._container_id, ContainerType.RUN)
-            }
-
-        def __getitem__(self, item: str) -> Union[Fetchable, FetchableSeries, Downloadable]:
-            return self._structure[item]
-
-        def __delitem__(self, key: str) -> None:
-            del self._cache[key]
-
-        @property
-        def field_names(self) -> Generator[str, None, None]:
-            """Lists names of run fields.
-
-            Returns a generator of run fields.
-            """
-            yield from self._structure
-
-        def prefetch(self, paths: List[str]) -> None:
-            """Prefetches values of a list of fields and stores them in local cache.
-
-            Args:
-                paths: List of field paths to prefetch.
-            """
-            fetched = self.project._backend.prefetch_values(self._container_id, ContainerType.RUN, paths)
-            self._cache.update(fetched)
