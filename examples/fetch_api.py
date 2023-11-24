@@ -18,8 +18,8 @@ from neptune import Run
 
 from neptune_fetcher import ReadOnlyProject
 
-PROJECT = "<PROJECT HERE>"
-WORKSPACE = "<WORKSPACE HERE>"
+PROJECT = "rafal-test"
+WORKSPACE = "administrator"
 
 
 def create_neptune_run() -> str:
@@ -40,6 +40,7 @@ def main():
 
     print("Run created. Now let's use the new fetcher API")
     project = ReadOnlyProject(workspace=WORKSPACE, project=PROJECT)
+    project.progress_indicator(True)
 
     run_info = list(project.list_runs())
     print("Run info list:\n", run_info, "\n###########################################\n")
