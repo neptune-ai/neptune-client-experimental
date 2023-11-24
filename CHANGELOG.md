@@ -1,3 +1,9 @@
+## [UNRELEASED] neptune-experimental 0.3.1
+
+### Changes
+- Adjustments after no bravado deserialization ([#33](https://github.com/neptune-ai/neptune-client-experimental/pull/33))
+
+
 ## neptune-experimental 0.3.0
 
 ### Features
