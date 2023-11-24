@@ -42,6 +42,9 @@ def main():
     print("Run created. Now let's use the new fetcher API")
     project = ReadOnlyProject(workspace=WORKSPACE, project=PROJECT)
 
+    # Track progress update
+    project.progress_indicator(True)
+
     run_info = list(project.list_runs())
     print("Run info list:\n", run_info, "\n###########################################\n")
 
@@ -64,9 +67,6 @@ def main():
     # Fetch single field
     lr = run["params/lr"].fetch()
     print("Learning rate:\n", lr, "\n###########################################\n")
-
-    # Track progress update
-    project.progress_indicator(True)
 
     # Fetch series
     series = run["series/my_float_series"].fetch_values()

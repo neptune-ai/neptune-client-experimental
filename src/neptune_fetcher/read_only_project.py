@@ -24,7 +24,6 @@ from typing import (
     Generator,
     Iterable,
     Optional,
-    TypeVar,
     Union,
 )
 
@@ -49,8 +48,6 @@ from neptune_fetcher.read_only_run import _get_attribute
 
 if TYPE_CHECKING:
     from pandas import DataFrame
-
-T = TypeVar("T")
 
 
 class ReadOnlyProject:
