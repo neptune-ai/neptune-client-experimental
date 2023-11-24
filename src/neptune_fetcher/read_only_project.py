@@ -33,8 +33,11 @@ from neptune.internal.backends.nql import NQLEmptyQuery
 from neptune.internal.backends.project_name_lookup import project_name_lookup
 from neptune.internal.container_type import ContainerType
 from neptune.internal.credentials import Credentials
-from neptune.internal.id_formats import UniqueId
-from neptune.management.internal.utils import normalize_project_name
+from neptune.internal.id_formats import (
+    QualifiedName,
+    UniqueId,
+    conform_optional,
+)
 from neptune.metadata_containers.metadata_containers_table import Table
 from neptune.metadata_containers.utils import prepare_nql_query
 
@@ -56,7 +59,6 @@ class ReadOnlyProject:
     def __init__(
         self,
         project: Optional[str] = None,
-        workspace: Optional[str] = None,
         api_token: Optional[str] = None,
         proxies: Optional[dict] = None,
     ) -> None:
@@ -67,18 +69,21 @@ class ReadOnlyProject:
 
         Args:
             project: The name of the Neptune project.
-            workspace: The workspace associated with the project.
             api_token: Neptune account's API token.
                 If left empty, the value of the NEPTUNE_API_TOKEN environment variable is used (recommended).
             proxies: A dictionary of proxy settings if needed.
         """
         self._project: Optional[str] = project if project else os.getenv(PROJECT_ENV_NAME)
+        if self._project is None:
+            raise Exception("Could not find project name in env")
+
         self._backend: CustomBackend = CustomBackend(
             credentials=Credentials.from_token(api_token=api_token), proxies=proxies
         )
-
-        self.project_identifier = normalize_project_name(name=project, workspace=workspace)
-        self._project_api_object: Project = project_name_lookup(backend=self._backend, name=self.project_identifier)
+        self._project_qualified_name: Optional[str] = conform_optional(self._project, QualifiedName)
+        self._project_api_object: Project = project_name_lookup(
+            backend=self._backend, name=self._project_qualified_name
+        )
         self._project_id: UniqueId = self._project_api_object.id
 
     def list_runs(self) -> Generator[Dict[str, Optional[str]], None, None]:
