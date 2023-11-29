@@ -3,6 +3,7 @@
 ### Changes
 - Exposed `ReadOnlyRun` object and added a fallback for `project` param in `ReadOnlyProject` ([#32](https://github.com/neptune-ai/neptune-client-experimental/pull/32))
 - Adjustments after no bravado deserialization ([#33](https://github.com/neptune-ai/neptune-client-experimental/pull/33))
+- Adjustments after adding support for more than 10k entries for `fetch_*_table()` ([#35](https://github.com/neptune-ai/neptune-client-experimental/pull/35))
 
 
 ## neptune-experimental 0.3.0
