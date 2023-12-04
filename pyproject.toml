@@ -12,7 +12,7 @@ pattern = "default-unprefixed"
 python = "^3.7"
 
 # Base neptune package
-neptune = "^1.8.5" # TODO: Change to 1.8.6 after release
+neptune = "^1.8.5" # TODO: Change to ==1.8.6 after release
 
 # For 3.7 compatibility
 typing_extensions = "^4.0.0"
