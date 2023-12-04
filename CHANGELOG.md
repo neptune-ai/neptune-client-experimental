@@ -1,4 +1,4 @@
-## [UNRELEASED] neptune-experimental 0.3.1
+## neptune-experimental 0.3.1
 
 ### Changes
 - Exposed `ReadOnlyRun` object and added a fallback for `project` param in `ReadOnlyProject` ([#32](https://github.com/neptune-ai/neptune-client-experimental/pull/32))
