@@ -19,6 +19,7 @@ import os
 from typing import (
     Any,
     Dict,
+    Generator,
     Iterable,
     List,
     Optional,
@@ -193,14 +194,13 @@ class CustomBackend(HostedNeptuneBackend):
         types: Optional[Iterable[ContainerType]] = None,
         query: Optional[NQLQuery] = None,
         columns: Optional[Iterable[str]] = None,
-    ) -> List[LeaderboardEntry]:
+    ) -> Generator[LeaderboardEntry, None, None]:
         step_size = int(os.getenv(NEPTUNE_FETCH_TABLE_STEP_SIZE, "1000"))
 
         types_filter = list(map(lambda container_type: container_type.to_api(), types)) if types else None
         attributes_filter = {"attributeFilters": [{"path": column} for column in columns]} if columns else {}
 
         try:
-            items = []
             self.progress_update_handler.pre_runs_table_fetch()
 
             for entry in iter_over_pages(
@@ -211,10 +211,9 @@ class CustomBackend(HostedNeptuneBackend):
                 attributes_filter=attributes_filter,
                 step_size=step_size,
             ):
-                items.append(entry)
+                yield entry
                 self.progress_update_handler.on_runs_table_fetch(1)
 
             self.progress_update_handler.post_runs_table_fetch()
-            return items
         except HTTPNotFound:
             raise ProjectNotFound(project_id)
