@@ -18,7 +18,7 @@ import os
 import shutil
 import threading
 from datetime import datetime
-from queue import Queue
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -36,6 +36,7 @@ from neptune.internal.operation_processors.operation_processor import OperationP
 from neptune.internal.operation_processors.operation_storage import get_container_dir
 
 if TYPE_CHECKING:
+    from neptune.internal.signals_processing.abstract import SignalsQueue
     from neptune.internal.signals_processing.signals import Signal
 
 
@@ -49,12 +50,13 @@ class PartitionedOperationProcessor(OperationProcessor):
         container_type: ContainerType,
         backend: NeptuneBackend,
         lock: threading.RLock,
-        queue: "Queue[Signal]",
+        queue: "SignalsQueue[Signal]",
         batch_size: int,
+        data_path: Optional[Path] = None,
         sleep_time: float = 5,
         partitions: int = 5,
     ):
-        self._data_path = self._init_data_path(container_id, container_type)
+        self._data_path = data_path if data_path else self._init_data_path(container_id, container_type)
         self._partitions = partitions
         self._processors = [
             AsyncOperationProcessor(
