@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import concurrent.futures
 import logging
 import os
 import shutil
@@ -34,12 +35,45 @@ from neptune.internal.operation import Operation
 from neptune.internal.operation_processors.async_operation_processor import AsyncOperationProcessor
 from neptune.internal.operation_processors.operation_processor import OperationProcessor
 from neptune.internal.operation_processors.operation_storage import get_container_dir
+from neptune.internal.threading.daemon import Daemon
 
 if TYPE_CHECKING:
     from neptune.internal.signals_processing.signals import Signal
 
 
 _logger = logging.getLogger(__name__)
+
+
+class EventListener(Daemon):
+    def __init__(self, sleep_time: float, num_processors: int, msg_queue: Queue) -> None:
+        super().__init__(sleep_time=sleep_time, name="event_listener")
+        self._num_processors = num_processors
+        self._msg_queue = msg_queue
+
+    def work(self) -> None:
+        data_arr: List[Optional[int]] = []
+
+        while len(data_arr) != self._num_processors:
+            data_arr.append(self._msg_queue.get())
+
+        if not any([msg is None for msg in data_arr]):
+            _logger.warning(
+                "Waiting for the remaining %s operations to synchronize with Neptune." " Do not kill this process.",
+                sum([msg if msg is not None else 0 for msg in data_arr]),
+            )
+
+        with self._msg_queue.mutex:
+            self._msg_queue.queue.clear()
+            data_arr = []
+
+        while True:
+            while len(data_arr) != self._num_processors:
+                data_arr.append(self._msg_queue.get())
+
+            _logger.warning(
+                "Still waiting for the remaining %s operations. Please wait.",
+                sum([msg if msg is not None else 0 for msg in data_arr]),
+            )
 
 
 class PartitionedOperationProcessor(OperationProcessor):
@@ -70,6 +104,7 @@ class PartitionedOperationProcessor(OperationProcessor):
             )
             for partition_id in range(partitions)
         ]
+        self._sleep_time = sleep_time
 
     @staticmethod
     def _init_data_path(container_id: "UniqueId", container_type: "ContainerType") -> Any:
@@ -108,12 +143,18 @@ class PartitionedOperationProcessor(OperationProcessor):
 
     def stop(self, seconds: Optional[float] = None) -> None:
         # TODO: Handle exceptions
-        # TODO: Better stop (async?)
-        if seconds is not None:
-            seconds /= self._partitions
 
-        for processor in self._processors:
-            processor.stop(seconds=seconds)
+        msg_que: Queue[Optional[int]] = Queue()
+        event_listener = EventListener(self._sleep_time, num_processors=len(self._processors), msg_queue=msg_que)
+        event_listener.start()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(processor.stop, seconds=seconds, msg_queue=msg_que) for processor in self._processors
+            ]
+            for future in concurrent.futures.as_completed(futures):
+                future.result()
+
+        event_listener.interrupt()
 
         if all(processor._queue.is_empty() for processor in self._processors):
             shutil.rmtree(self._data_path, ignore_errors=True)
