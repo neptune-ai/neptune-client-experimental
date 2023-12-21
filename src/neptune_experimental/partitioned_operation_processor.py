@@ -62,6 +62,8 @@ class EventListener(Daemon):
                 sum([msg if msg is not None else 0 for msg in data_arr]),
             )
 
+        data_arr = []
+
         while True:
             while len(data_arr) != self._num_processors:
                 data_arr.append(self._msg_queue.get())
