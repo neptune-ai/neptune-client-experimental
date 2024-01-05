@@ -22,3 +22,5 @@ fake = Faker()
 def test_max_length_custom_run_id():
     custom_run_id = "".join(fake.random_letters(128))
     assert not custom_run_id_exceeds_length(custom_run_id)
+    custom_run_id = "".join(fake.random_letters(129))
+    assert custom_run_id_exceeds_length(custom_run_id)
