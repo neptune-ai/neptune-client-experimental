@@ -1,3 +1,9 @@
+## neptune-experimental 0.3.2
+
+### Changes
+- Allow up to 128 characters for custom run id ([#46](https://github.com/neptune-ai/neptune-client-experimental/pull/46))
+
+
 ## neptune-experimental 0.3.1
 
 ### Changes
