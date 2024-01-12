@@ -52,6 +52,63 @@ if TYPE_CHECKING:
     from neptune.internal.signals_processing.signals import Signal
 
 
+class ProcessorStopSignalHandler:
+    def __init__(self, processor_stop_logger: ProcessorStopLogger) -> None:
+        self._logger = processor_stop_logger
+
+    def handle_connection_interruption(self, signal: "ProcessorStopSignal") -> None:
+        self._logger.log_connection_interruption(signal.data.max_reconnect_wait_time)
+
+    def handle_waiting_for_operations(
+        self,
+        signals: Dict[ProcessorStopSignalType, "List[ProcessorStopSignalData]"],
+    ) -> None:
+        size_remaining = sum(
+            sig_data.size_remaining for sig_data in signals[ProcessorStopSignalType.WAITING_FOR_OPERATIONS]
+        )
+        self._logger.log_remaining_operations(size_remaining=size_remaining)
+
+        # reset the array to wait for the next 'batch' of wait signals
+        signals[ProcessorStopSignalType.WAITING_FOR_OPERATIONS] = []
+
+    def handle_failure(
+        self,
+        signal: "ProcessorStopSignal",
+    ) -> None:
+        # log sync failure
+        if signal.signal_type == ProcessorStopSignalType.SYNC_FAILURE:
+            self._logger.log_sync_failure(signal.data.seconds, signal.data.size_remaining)
+
+        # log reconnect failure
+        elif signal.signal_type == ProcessorStopSignalType.RECONNECT_FAILURE:
+            self._logger.log_reconnect_failure(signal.data.max_reconnect_wait_time, signal.data.size_remaining)
+
+    def handle_success(
+        self,
+        signals: Dict[ProcessorStopSignalType, "List[ProcessorStopSignalData]"],
+    ) -> None:
+        ops_synced = sum(sig_data.already_synced for sig_data in signals[ProcessorStopSignalType.SUCCESS])
+        self._logger.log_success(ops_synced=ops_synced)
+
+    def handle_still_waiting(
+        self,
+        signals: Dict[ProcessorStopSignalType, "List[ProcessorStopSignalData]"],
+    ) -> None:
+        total_size_synced = sum(sig_data.already_synced for sig_data in signals[ProcessorStopSignalType.STILL_WAITING])
+        total_size_remaining = sum(
+            sig_data.size_remaining for sig_data in signals[ProcessorStopSignalType.STILL_WAITING]
+        )
+        total_operations = sum(
+            sig_data.already_synced + sig_data.size_remaining
+            for sig_data in signals[ProcessorStopSignalType.STILL_WAITING]
+        )
+        self._logger.log_still_waiting(
+            size_remaining=total_size_remaining,
+            already_synced=total_size_synced,
+            already_synced_proc=total_size_synced / total_operations * 100,
+        )
+
+
 class ProcessorStopEventListener(contextlib.AbstractContextManager):
     def __init__(self, num_processors: int, signal_queue: "Queue[ProcessorStopSignal]") -> None:
         self._num_processors = num_processors
@@ -77,57 +134,33 @@ class ProcessorStopEventListener(contextlib.AbstractContextManager):
             signal_type: [] for signal_type in ProcessorStopSignalType
         }
 
-        while True:
+        handler = ProcessorStopSignalHandler(self._logger)
+
+        while True:  # only a single failure or full success breaks the loop
             signal = self._signal_queue.get()
             signals[signal.signal_type].append(signal.data)
 
             # log connection interruption
             if signal.signal_type == ProcessorStopSignalType.CONNECTION_INTERRUPTED:
-                self._logger.log_connection_interruption(signal.data.max_reconnect_wait_time)
+                handler.handle_connection_interruption(signal=signal)
 
             # log that we wait for operations
             if len(signals[ProcessorStopSignalType.WAITING_FOR_OPERATIONS]) == self._num_processors:
-                size_remaining = sum(
-                    sig_data.size_remaining for sig_data in signals[ProcessorStopSignalType.WAITING_FOR_OPERATIONS]
-                )
-                self._logger.log_remaining_operations(size_remaining=size_remaining)
+                handler.handle_waiting_for_operations(signals=signals)
 
-                # reset the array to wait for the next 'batch' of wait signals
-                signals[ProcessorStopSignalType.WAITING_FOR_OPERATIONS] = []
-
-            # log sync failure
-            if signal.signal_type == ProcessorStopSignalType.SYNC_FAILURE:
-                self._logger.log_sync_failure(signal.data.seconds, signal.data.size_remaining)
-                return
-
-            # log reconnect failure
-            if signal.signal_type == ProcessorStopSignalType.RECONNECT_FAILURE:
-                self._logger.log_reconnect_failure(signal.data.max_reconnect_wait_time, signal.data.size_remaining)
+            # if something went wrong - log failure
+            if signal.signal_type in (ProcessorStopSignalType.SYNC_FAILURE, ProcessorStopSignalType.RECONNECT_FAILURE):
+                handler.handle_failure(signal=signal)
                 return
 
             # if all went well - log success
             if len(signals[ProcessorStopSignalType.SUCCESS]) == self._num_processors:
-                ops_synced = sum(sig_data.already_synced for sig_data in signals[ProcessorStopSignalType.SUCCESS])
-                self._logger.log_success(ops_synced=ops_synced)
+                handler.handle_success(signals=signals)
                 return
 
             # log that we still wait + percentage of already synced operations
             if signal.signal_type == ProcessorStopSignalType.STILL_WAITING:
-                total_size_synced = sum(
-                    sig_data.already_synced for sig_data in signals[ProcessorStopSignalType.STILL_WAITING]
-                )
-                total_size_remaining = sum(
-                    sig_data.size_remaining for sig_data in signals[ProcessorStopSignalType.STILL_WAITING]
-                )
-                total_operations = sum(
-                    sig_data.already_synced + sig_data.size_remaining
-                    for sig_data in signals[ProcessorStopSignalType.STILL_WAITING]
-                )
-                self._logger.log_still_waiting(
-                    size_remaining=total_size_remaining,
-                    already_synced=total_size_synced,
-                    already_synced_proc=total_size_synced / total_operations * 100,
-                )
+                handler.handle_still_waiting(signals=signals)
 
 
 class PartitionedOperationProcessor(OperationProcessor):
