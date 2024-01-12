@@ -14,17 +14,20 @@
 # limitations under the License.
 #
 import concurrent.futures
-import logging
+import contextlib
 import os
 import shutil
 import threading
 from datetime import datetime
 from queue import Queue
+from types import TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
+    Dict,
     List,
     Optional,
+    Type,
 )
 
 from neptune.constants import ASYNC_DIRECTORY
@@ -33,45 +36,98 @@ from neptune.internal.container_type import ContainerType
 from neptune.internal.id_formats import UniqueId
 from neptune.internal.operation import Operation
 from neptune.internal.operation_processors.async_operation_processor import AsyncOperationProcessor
+from neptune.internal.operation_processors.operation_logger import (
+    ProcessorStopLogger,
+    ProcessorStopSignalType,
+)
 from neptune.internal.operation_processors.operation_processor import OperationProcessor
 from neptune.internal.operation_processors.operation_storage import get_container_dir
-from neptune.internal.threading.daemon import Daemon
+from neptune.internal.utils.logger import logger as _logger
 
 if TYPE_CHECKING:
+    from neptune.internal.operation_processors.operation_logger import (
+        ProcessorStopSignal,
+        ProcessorStopSignalData,
+    )
     from neptune.internal.signals_processing.signals import Signal
 
 
-_logger = logging.getLogger(__name__)
-
-
-class EventListener(Daemon):
-    def __init__(self, sleep_time: float, num_processors: int, msg_queue: Queue) -> None:
-        super().__init__(sleep_time=sleep_time, name="event_listener")
+class ProcessorStopEventListener(contextlib.AbstractContextManager):
+    def __init__(self, num_processors: int, signal_queue: "Queue[ProcessorStopSignal]") -> None:
         self._num_processors = num_processors
-        self._msg_queue = msg_queue
+        self._signal_queue = signal_queue
+        self._t = threading.Thread(target=self.work)
+        self._logger = ProcessorStopLogger(signal_queue=None, logger=_logger)
+
+    def __enter__(self) -> None:
+        self._t.start()
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        if exc_val is not None:
+            _logger.error(exc_val, exc_info=exc_tb)
+        self._t.join()
 
     def work(self) -> None:
-        data_arr: List[Optional[int]] = []
-
-        while len(data_arr) != self._num_processors:
-            data_arr.append(self._msg_queue.get())
-
-        if not any([msg is None for msg in data_arr]):
-            _logger.warning(
-                "Waiting for the remaining %s operations to synchronize with Neptune." " Do not kill this process.",
-                sum([msg if msg is not None else 0 for msg in data_arr]),
-            )
-
-        data_arr = []
+        signals: Dict[ProcessorStopSignalType, "List[ProcessorStopSignalData]"] = {
+            signal_type: [] for signal_type in ProcessorStopSignalType
+        }
 
         while True:
-            while len(data_arr) != self._num_processors:
-                data_arr.append(self._msg_queue.get())
+            signal = self._signal_queue.get()
+            signals[signal.signal_type].append(signal.data)
 
-            _logger.warning(
-                "Still waiting for the remaining %s operations. Please wait.",
-                sum([msg if msg is not None else 0 for msg in data_arr]),
-            )
+            # log connection interruption
+            if signal.signal_type == ProcessorStopSignalType.CONNECTION_INTERRUPTED:
+                self._logger.log_connection_interruption(signal.data.max_reconnect_wait_time)
+
+            # log that we wait for operations
+            if len(signals[ProcessorStopSignalType.WAITING_FOR_OPERATIONS]) == self._num_processors:
+                size_remaining = sum(
+                    sig_data.size_remaining for sig_data in signals[ProcessorStopSignalType.WAITING_FOR_OPERATIONS]
+                )
+                self._logger.log_remaining_operations(size_remaining=size_remaining)
+
+                # reset the array to wait for the next 'batch' of wait signals
+                signals[ProcessorStopSignalType.WAITING_FOR_OPERATIONS] = []
+
+            # log sync failure
+            if signal.signal_type == ProcessorStopSignalType.SYNC_FAILURE:
+                self._logger.log_sync_failure(signal.data.seconds, signal.data.size_remaining)
+                return
+
+            # log reconnect failure
+            if signal.signal_type == ProcessorStopSignalType.RECONNECT_FAILURE:
+                self._logger.log_reconnect_failure(signal.data.max_reconnect_wait_time, signal.data.size_remaining)
+                return
+
+            # if all went well - log success
+            if len(signals[ProcessorStopSignalType.SUCCESS]) == self._num_processors:
+                ops_synced = sum(sig_data.already_synced for sig_data in signals[ProcessorStopSignalType.SUCCESS])
+                self._logger.log_success(ops_synced=ops_synced)
+                return
+
+            # log that we still wait + percentage of already synced operations
+            if signal.signal_type == ProcessorStopSignalType.STILL_WAITING:
+                total_size_synced = sum(
+                    sig_data.already_synced for sig_data in signals[ProcessorStopSignalType.STILL_WAITING]
+                )
+                total_size_remaining = sum(
+                    sig_data.size_remaining for sig_data in signals[ProcessorStopSignalType.STILL_WAITING]
+                )
+                total_operations = sum(
+                    sig_data.already_synced + sig_data.size_remaining
+                    for sig_data in signals[ProcessorStopSignalType.STILL_WAITING]
+                )
+                self._logger.log_still_waiting(
+                    size_remaining=total_size_remaining,
+                    already_synced=total_size_synced,
+                    already_synced_proc=total_size_synced / total_operations * 100,
+                )
 
 
 class PartitionedOperationProcessor(OperationProcessor):
@@ -102,7 +158,6 @@ class PartitionedOperationProcessor(OperationProcessor):
             )
             for partition_id in range(partitions)
         ]
-        self._sleep_time = sleep_time
 
     @staticmethod
     def _init_data_path(container_id: "UniqueId", container_type: "ContainerType") -> Any:
@@ -142,17 +197,19 @@ class PartitionedOperationProcessor(OperationProcessor):
     def stop(self, seconds: Optional[float] = None) -> None:
         # TODO: Handle exceptions
 
-        msg_que: Queue[Optional[int]] = Queue()
-        event_listener = EventListener(self._sleep_time, num_processors=len(self._processors), msg_queue=msg_que)
-        event_listener.start()
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [
-                executor.submit(processor.stop, seconds=seconds, msg_queue=msg_que) for processor in self._processors
-            ]
-            for future in concurrent.futures.as_completed(futures):
-                future.result()
-
-        event_listener.interrupt()
+        signal_queue: "Queue[ProcessorStopSignal]" = Queue()
+        with ProcessorStopEventListener(num_processors=len(self._processors), signal_queue=signal_queue):
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = [
+                    executor.submit(
+                        processor.stop,
+                        seconds=seconds,
+                        signal_queue=signal_queue,
+                    )
+                    for processor in self._processors
+                ]
+                for future in concurrent.futures.as_completed(futures):
+                    future.result()
 
         if all(processor._queue.is_empty() for processor in self._processors):
             shutil.rmtree(self._data_path, ignore_errors=True)
