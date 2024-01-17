@@ -116,8 +116,9 @@ class ProcessorStopEventListener(contextlib.AbstractContextManager):
         self._t = threading.Thread(target=self.work)
         self._logger = ProcessorStopLogger(signal_queue=None, logger=_logger)
 
-    def __enter__(self) -> None:
+    def __enter__(self) -> "ProcessorStopEventListener":
         self._t.start()
+        return self
 
     def __exit__(
         self,
