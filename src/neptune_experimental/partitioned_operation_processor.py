@@ -138,30 +138,36 @@ class ProcessorStopEventListener(contextlib.AbstractContextManager):
         handler = ProcessorStopSignalHandler(self._logger)
 
         while True:  # only a single failure or full success breaks the loop
-            signal = self._signal_queue.get()
-            signals[signal.signal_type].append(signal.data)
+            try:
+                signal = self._signal_queue.get()
+                signals[signal.signal_type].append(signal.data)
 
-            # log connection interruption
-            if signal.signal_type == ProcessorStopSignalType.CONNECTION_INTERRUPTED:
-                handler.handle_connection_interruption(signal=signal)
+                # log connection interruption
+                if signal.signal_type == ProcessorStopSignalType.CONNECTION_INTERRUPTED:
+                    handler.handle_connection_interruption(signal=signal)
 
-            # log that we wait for operations
-            if len(signals[ProcessorStopSignalType.WAITING_FOR_OPERATIONS]) == self._num_processors:
-                handler.handle_waiting_for_operations(signals=signals)
+                # log that we wait for operations
+                if len(signals[ProcessorStopSignalType.WAITING_FOR_OPERATIONS]) == self._num_processors:
+                    handler.handle_waiting_for_operations(signals=signals)
 
-            # if something went wrong - log failure
-            if signal.signal_type in (ProcessorStopSignalType.SYNC_FAILURE, ProcessorStopSignalType.RECONNECT_FAILURE):
-                handler.handle_failure(signal=signal)
+                # if something went wrong - log failure
+                if signal.signal_type in (
+                    ProcessorStopSignalType.SYNC_FAILURE,
+                    ProcessorStopSignalType.RECONNECT_FAILURE,
+                ):
+                    handler.handle_failure(signal=signal)
+                    return
+
+                # if all went well - log success
+                if len(signals[ProcessorStopSignalType.SUCCESS]) == self._num_processors:
+                    handler.handle_success(signals=signals)
+                    return
+
+                # log that we still wait + percentage of already synced operations
+                if signal.signal_type == ProcessorStopSignalType.STILL_WAITING:
+                    handler.handle_still_waiting(signals=signals)
+            except KeyboardInterrupt:
                 return
-
-            # if all went well - log success
-            if len(signals[ProcessorStopSignalType.SUCCESS]) == self._num_processors:
-                handler.handle_success(signals=signals)
-                return
-
-            # log that we still wait + percentage of already synced operations
-            if signal.signal_type == ProcessorStopSignalType.STILL_WAITING:
-                handler.handle_still_waiting(signals=signals)
 
 
 class PartitionedOperationProcessor(OperationProcessor):
