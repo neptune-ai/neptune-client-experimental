@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import concurrent.futures
 import contextlib
 import os
 import shutil
@@ -60,8 +59,9 @@ SIGNALS_TO_ACCUMULATE = (
 
 
 class ProcessorStopSignalHandler:
-    def __init__(self, processor_stop_logger: ProcessorStopLogger) -> None:
+    def __init__(self, processor_stop_logger: ProcessorStopLogger, num_processors: int) -> None:
         self._logger = processor_stop_logger
+        self._active_processors = num_processors
         self._total_op_count = 0
         self._still_waiting_signals: Dict[int, int] = {}
 
@@ -101,6 +101,7 @@ class ProcessorStopSignalHandler:
 
     def mark_processor_as_completed(self, signal: "ProcessorStopSignal") -> None:
         self._still_waiting_signals.pop(signal.data.processor_id, None)
+        self._active_processors -= 1
 
     def handle_still_waiting(
         self,
@@ -112,7 +113,7 @@ class ProcessorStopSignalHandler:
         self._still_waiting_signals[waiting_signal.data.processor_id] = waiting_signal.data.already_synced
 
         # wait for all active processors to send their still waiting signals
-        if len(signals[ProcessorStopSignalType.STILL_WAITING]) != len(self._still_waiting_signals):
+        if len(signals[ProcessorStopSignalType.STILL_WAITING]) != self._active_processors:
             return
 
         # reset the array to wait for the next 'batch' of still waiting signals
@@ -158,7 +159,7 @@ class ProcessorStopEventListener(contextlib.AbstractContextManager):
             signal_type: [] for signal_type in SIGNALS_TO_ACCUMULATE
         }
 
-        handler = ProcessorStopSignalHandler(self._logger)
+        handler = ProcessorStopSignalHandler(self._logger, self._num_processors)
 
         while True:  # only a single failure or full success breaks the loop
             try:
@@ -267,18 +268,17 @@ class PartitionedOperationProcessor(OperationProcessor):
         # TODO: Handle exceptions
 
         signal_queue: "Queue[ProcessorStopSignal]" = Queue()
+
+        threads = [
+            threading.Thread(target=processor.stop, args=(seconds, signal_queue)) for processor in self._processors
+        ]
+
         with ProcessorStopEventListener(num_processors=len(self._processors), signal_queue=signal_queue):
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = [
-                    executor.submit(
-                        processor.stop,
-                        seconds=seconds,
-                        signal_queue=signal_queue,
-                    )
-                    for processor in self._processors
-                ]
-                for future in concurrent.futures.as_completed(futures):
-                    future.result()
+            for t in threads:
+                t.start()
+
+            for t in threads:
+                t.join()
 
         if all(processor._queue.is_empty() for processor in self._processors):
             shutil.rmtree(self._data_path, ignore_errors=True)
