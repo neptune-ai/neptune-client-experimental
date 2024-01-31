@@ -52,15 +52,18 @@ if TYPE_CHECKING:
     from neptune.internal.signals_processing.signals import Signal
 
 
+SIGNALS_TO_ACCUMULATE = (
+    ProcessorStopSignalType.SUCCESS,
+    ProcessorStopSignalType.WAITING_FOR_OPERATIONS,
+    ProcessorStopSignalType.STILL_WAITING,
+)
+
+
 class ProcessorStopSignalHandler:
     def __init__(self, processor_stop_logger: ProcessorStopLogger) -> None:
         self._logger = processor_stop_logger
         self._total_op_count = 0
-        self._still_waiting_signals: Dict[int, List[int]] = {}
-
-    def submit_processor(self, signal: "ProcessorStopSignal") -> None:
-        if signal.data.processor_id not in self._still_waiting_signals:
-            self._still_waiting_signals[signal.data.processor_id] = []
+        self._still_waiting_signals: Dict[int, int] = {}
 
     def handle_connection_interruption(self, signal: "ProcessorStopSignal") -> None:
         self._logger.log_connection_interruption(signal.data.max_reconnect_wait_time)
@@ -97,19 +100,26 @@ class ProcessorStopSignalHandler:
         self._logger.log_success(ops_synced=ops_synced)
 
     def mark_processor_as_completed(self, signal: "ProcessorStopSignal") -> None:
-        self._still_waiting_signals.pop(signal.data.processor_id)
+        self._still_waiting_signals.pop(signal.data.processor_id, None)
 
     def handle_still_waiting(
         self,
         signals: Dict[ProcessorStopSignalType, "List[ProcessorStopSignalData]"],
         waiting_signal: "ProcessorStopSignal",
     ) -> None:
-        self._still_waiting_signals[waiting_signal.data.processor_id].append(waiting_signal.data.already_synced)
+        assert waiting_signal.signal_type == ProcessorStopSignalType.STILL_WAITING
+
+        self._still_waiting_signals[waiting_signal.data.processor_id] = waiting_signal.data.already_synced
+
+        # wait for all active processors to send their still waiting signals
+        if len(signals[ProcessorStopSignalType.STILL_WAITING]) != len(self._still_waiting_signals):
+            return
+
+        # reset the array to wait for the next 'batch' of still waiting signals
+        signals[ProcessorStopSignalType.STILL_WAITING] = []
 
         synced_by_success_proc = sum(sig_data.already_synced for sig_data in signals[ProcessorStopSignalType.SUCCESS])
-        synced_by_waiting_proc = sum(
-            [proc_signals[-1] for proc_signals in self._still_waiting_signals.values() if proc_signals]
-        )
+        synced_by_waiting_proc = sum([already_synced for already_synced in self._still_waiting_signals.values()])
 
         total_size_synced = synced_by_success_proc + synced_by_waiting_proc
 
@@ -144,10 +154,8 @@ class ProcessorStopEventListener(contextlib.AbstractContextManager):
         self._t.join()
 
     def work(self) -> None:
-        signals_to_accumulate = (ProcessorStopSignalType.SUCCESS, ProcessorStopSignalType.WAITING_FOR_OPERATIONS)
-
         signals: Dict[ProcessorStopSignalType, "List[ProcessorStopSignalData]"] = {
-            signal_type: [] for signal_type in signals_to_accumulate
+            signal_type: [] for signal_type in SIGNALS_TO_ACCUMULATE
         }
 
         handler = ProcessorStopSignalHandler(self._logger)
@@ -156,10 +164,7 @@ class ProcessorStopEventListener(contextlib.AbstractContextManager):
             try:
                 signal = self._signal_queue.get()
 
-                if signal.signal_type == ProcessorStopSignalType.WAITING_FOR_OPERATIONS:
-                    handler.submit_processor(signal=signal)
-
-                if signal.signal_type in signals_to_accumulate:
+                if signal.signal_type in SIGNALS_TO_ACCUMULATE:
                     signals[signal.signal_type].append(signal.data)
 
                 # log connection interruption
