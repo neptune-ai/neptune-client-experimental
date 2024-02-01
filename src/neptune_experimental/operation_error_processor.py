@@ -51,7 +51,9 @@ class OperationErrorProcessor:
 
     def handle(self, errors: List["NeptuneException"]) -> None:
         from neptune.exceptions import MetadataInconsistency
-        from neptune.internal.utils.logger import logger
+        from neptune.internal.utils.logger import get_logger
+
+        logger = get_logger()
 
         for error in errors:
             if self._sampling_enabled and isinstance(error, MetadataInconsistency):
@@ -63,7 +65,9 @@ class OperationErrorProcessor:
             logger.error("Error occurred during asynchronous operation processing: %s", str(error))
 
     def _handle_not_increased_error_for_step(self, error: "MetadataInconsistency", step: str) -> None:
-        from neptune.internal.utils.logger import logger
+        from neptune.internal.utils.logger import get_logger
+
+        logger = get_logger()
 
         if step not in self._logged_steps:
             self._logged_steps.add(step)
