@@ -41,7 +41,7 @@ from neptune.internal.operation_processors.operation_logger import (
 )
 from neptune.internal.operation_processors.operation_processor import OperationProcessor
 from neptune.internal.operation_processors.operation_storage import get_container_dir
-from neptune.internal.utils.logger import logger as _logger
+from neptune.internal.utils.logger import get_logger
 
 if TYPE_CHECKING:
     from neptune.internal.operation_processors.operation_logger import (
@@ -50,6 +50,8 @@ if TYPE_CHECKING:
     )
     from neptune.internal.signals_processing.signals import Signal
 
+
+_logger = get_logger()
 
 SIGNALS_TO_ACCUMULATE = (
     ProcessorStopSignalType.SUCCESS,
