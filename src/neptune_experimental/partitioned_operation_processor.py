@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import concurrent.futures
 import contextlib
 import os
 import shutil
@@ -42,7 +41,7 @@ from neptune.internal.operation_processors.operation_logger import (
 )
 from neptune.internal.operation_processors.operation_processor import OperationProcessor
 from neptune.internal.operation_processors.operation_storage import get_container_dir
-from neptune.internal.utils.logger import logger as _logger
+from neptune.internal.utils.logger import get_logger
 
 if TYPE_CHECKING:
     from neptune.internal.operation_processors.operation_logger import (
@@ -52,9 +51,21 @@ if TYPE_CHECKING:
     from neptune.internal.signals_processing.signals import Signal
 
 
+_logger = get_logger()
+
+SIGNALS_TO_ACCUMULATE = (
+    ProcessorStopSignalType.SUCCESS,
+    ProcessorStopSignalType.WAITING_FOR_OPERATIONS,
+    ProcessorStopSignalType.STILL_WAITING,
+)
+
+
 class ProcessorStopSignalHandler:
-    def __init__(self, processor_stop_logger: ProcessorStopLogger) -> None:
+    def __init__(self, processor_stop_logger: ProcessorStopLogger, num_processors: int) -> None:
         self._logger = processor_stop_logger
+        self._active_processors = num_processors
+        self._total_op_count = 0
+        self._still_waiting_signals: Dict[int, int] = {}
 
     def handle_connection_interruption(self, signal: "ProcessorStopSignal") -> None:
         self._logger.log_connection_interruption(signal.data.max_reconnect_wait_time)
@@ -63,10 +74,10 @@ class ProcessorStopSignalHandler:
         self,
         signals: Dict[ProcessorStopSignalType, "List[ProcessorStopSignalData]"],
     ) -> None:
-        size_remaining = sum(
+        self._total_op_count = sum(
             sig_data.size_remaining for sig_data in signals[ProcessorStopSignalType.WAITING_FOR_OPERATIONS]
         )
-        self._logger.log_remaining_operations(size_remaining=size_remaining)
+        self._logger.log_remaining_operations(size_remaining=self._total_op_count)
 
         # reset the array to wait for the next 'batch' of wait signals
         signals[ProcessorStopSignalType.WAITING_FOR_OPERATIONS] = []
@@ -90,22 +101,37 @@ class ProcessorStopSignalHandler:
         ops_synced = sum(sig_data.already_synced for sig_data in signals[ProcessorStopSignalType.SUCCESS])
         self._logger.log_success(ops_synced=ops_synced)
 
+    def mark_processor_as_completed(self, signal: "ProcessorStopSignal") -> None:
+        self._still_waiting_signals.pop(signal.data.processor_id, None)
+        self._active_processors -= 1
+
     def handle_still_waiting(
         self,
         signals: Dict[ProcessorStopSignalType, "List[ProcessorStopSignalData]"],
+        waiting_signal: "ProcessorStopSignal",
     ) -> None:
-        total_size_synced = sum(sig_data.already_synced for sig_data in signals[ProcessorStopSignalType.STILL_WAITING])
-        total_size_remaining = sum(
-            sig_data.size_remaining for sig_data in signals[ProcessorStopSignalType.STILL_WAITING]
-        )
-        total_operations = sum(
-            sig_data.already_synced + sig_data.size_remaining
-            for sig_data in signals[ProcessorStopSignalType.STILL_WAITING]
-        )
+        assert waiting_signal.signal_type == ProcessorStopSignalType.STILL_WAITING
+
+        self._still_waiting_signals[waiting_signal.data.processor_id] = waiting_signal.data.already_synced
+
+        # wait for all active processors to send their still waiting signals
+        if len(signals[ProcessorStopSignalType.STILL_WAITING]) != self._active_processors:
+            return
+
+        # reset the array to wait for the next 'batch' of still waiting signals
+        signals[ProcessorStopSignalType.STILL_WAITING] = []
+
+        synced_by_success_proc = sum(sig_data.already_synced for sig_data in signals[ProcessorStopSignalType.SUCCESS])
+        synced_by_waiting_proc = sum([already_synced for already_synced in self._still_waiting_signals.values()])
+
+        total_size_synced = synced_by_success_proc + synced_by_waiting_proc
+
+        total_size_remaining = self._total_op_count - total_size_synced
+
         self._logger.log_still_waiting(
             size_remaining=total_size_remaining,
             already_synced=total_size_synced,
-            already_synced_proc=total_size_synced / total_operations * 100,
+            already_synced_proc=total_size_synced * 100 / self._total_op_count,
         )
 
 
@@ -114,7 +140,7 @@ class ProcessorStopEventListener(contextlib.AbstractContextManager):
         self._num_processors = num_processors
         self._signal_queue = signal_queue
         self._t = threading.Thread(target=self.work)
-        self._logger = ProcessorStopLogger(signal_queue=None, logger=_logger)
+        self._logger = ProcessorStopLogger(processor_id=0, signal_queue=None, logger=_logger)
 
     def __enter__(self) -> "ProcessorStopEventListener":
         self._t.start()
@@ -132,15 +158,17 @@ class ProcessorStopEventListener(contextlib.AbstractContextManager):
 
     def work(self) -> None:
         signals: Dict[ProcessorStopSignalType, "List[ProcessorStopSignalData]"] = {
-            signal_type: [] for signal_type in ProcessorStopSignalType
+            signal_type: [] for signal_type in SIGNALS_TO_ACCUMULATE
         }
 
-        handler = ProcessorStopSignalHandler(self._logger)
+        handler = ProcessorStopSignalHandler(self._logger, self._num_processors)
 
         while True:  # only a single failure or full success breaks the loop
             try:
                 signal = self._signal_queue.get()
-                signals[signal.signal_type].append(signal.data)
+
+                if signal.signal_type in SIGNALS_TO_ACCUMULATE:
+                    signals[signal.signal_type].append(signal.data)
 
                 # log connection interruption
                 if signal.signal_type == ProcessorStopSignalType.CONNECTION_INTERRUPTED:
@@ -158,6 +186,10 @@ class ProcessorStopEventListener(contextlib.AbstractContextManager):
                     handler.handle_failure(signal=signal)
                     return
 
+                # mark processor as completed - don't count its operations in the 'still waiting' count
+                if signal.signal_type == ProcessorStopSignalType.SUCCESS:
+                    handler.mark_processor_as_completed(signal=signal)
+
                 # if all went well - log success
                 if len(signals[ProcessorStopSignalType.SUCCESS]) == self._num_processors:
                     handler.handle_success(signals=signals)
@@ -165,7 +197,7 @@ class ProcessorStopEventListener(contextlib.AbstractContextManager):
 
                 # log that we still wait + percentage of already synced operations
                 if signal.signal_type == ProcessorStopSignalType.STILL_WAITING:
-                    handler.handle_still_waiting(signals=signals)
+                    handler.handle_still_waiting(signals=signals, waiting_signal=signal)
             except KeyboardInterrupt:
                 return
 
@@ -238,18 +270,17 @@ class PartitionedOperationProcessor(OperationProcessor):
         # TODO: Handle exceptions
 
         signal_queue: "Queue[ProcessorStopSignal]" = Queue()
+
+        threads = [
+            threading.Thread(target=processor.stop, args=(seconds, signal_queue)) for processor in self._processors
+        ]
+
         with ProcessorStopEventListener(num_processors=len(self._processors), signal_queue=signal_queue):
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = [
-                    executor.submit(
-                        processor.stop,
-                        seconds=seconds,
-                        signal_queue=signal_queue,
-                    )
-                    for processor in self._processors
-                ]
-                for future in concurrent.futures.as_completed(futures):
-                    future.result()
+            for t in threads:
+                t.start()
+
+            for t in threads:
+                t.join()
 
         if all(processor._queue.is_empty() for processor in self._processors):
             shutil.rmtree(self._data_path, ignore_errors=True)
