@@ -15,43 +15,22 @@
 #
 __all__ = ["CustomBackend"]
 
-import os
 from typing import (
     Any,
     Dict,
-    Iterable,
     List,
-    Optional,
 )
 
 from bravado.exception import HTTPNotFound
-from neptune.api.searching_entries import iter_over_pages
-from neptune.common.backends.utils import with_api_exceptions_handler
-from neptune.common.exceptions import ClientHttpError
-from neptune.envs import NEPTUNE_FETCH_TABLE_STEP_SIZE
-from neptune.exceptions import (
-    ContainerUUIDNotFound,
-    FetchAttributeNotFoundException,
-    ProjectNotFound,
-)
+from neptune.exceptions import ContainerUUIDNotFound
 from neptune.internal.backends.api_model import (
     Attribute,
     AttributeType,
-    LeaderboardEntry,
 )
 from neptune.internal.backends.hosted_client import DEFAULT_REQUEST_KWARGS
-from neptune.internal.backends.hosted_file_operations import (
-    download_file_attribute,
-    download_file_set_attribute,
-)
-from neptune.internal.backends.hosted_neptune_backend import (
-    HostedNeptuneBackend,
-    _logger,
-)
-from neptune.internal.backends.nql import NQLQuery
+from neptune.internal.backends.hosted_neptune_backend import HostedNeptuneBackend
 from neptune.internal.container_type import ContainerType
-from neptune.internal.id_formats import UniqueId
-from neptune.internal.utils.paths import path_to_str
+from neptune.internal.utils.logger import get_logger
 
 from neptune_fetcher.attributes import (
     Attr,
@@ -61,10 +40,8 @@ from neptune_fetcher.attributes import (
     Integer,
     String,
 )
-from neptune_fetcher.progress_update_handler import (
-    NullProgressUpdateHandler,
-    ProgressUpdateHandler,
-)
+
+logger = get_logger()
 
 
 def to_attribute(attr) -> Attribute:
@@ -86,58 +63,6 @@ def get_attribute_from_dto(dto: Any) -> Attr:
 
 
 class CustomBackend(HostedNeptuneBackend):
-    def __init__(self, *args: Any, progress_update_handler: Optional[ProgressUpdateHandler] = None, **kwargs: Any):
-        super().__init__(*args, **kwargs)
-        self.progress_update_handler: ProgressUpdateHandler = (
-            progress_update_handler if progress_update_handler else NullProgressUpdateHandler()
-        )
-
-    def download_file(
-        self,
-        container_id: str,
-        container_type: ContainerType,
-        path: List[str],
-        destination: Optional[str] = None,
-    ) -> None:
-        try:
-            download_file_attribute(
-                swagger_client=self.leaderboard_client,
-                container_id=container_id,
-                attribute=path_to_str(path),
-                destination=destination,
-                pre_download_hook=self.progress_update_handler.pre_download,
-                download_iter_hook=self.progress_update_handler.on_download_chunk,
-                post_download_hook=self.progress_update_handler.post_download,
-            )
-        except ClientHttpError as e:
-            if e.status == HTTPNotFound.status_code:
-                raise FetchAttributeNotFoundException(path_to_str(path))
-            else:
-                raise
-
-    def download_file_set(
-        self,
-        container_id: str,
-        container_type: ContainerType,
-        path: List[str],
-        destination: Optional[str] = None,
-    ) -> None:
-        download_request = self._get_file_set_download_request(container_id, container_type, path)
-        try:
-            download_file_set_attribute(
-                swagger_client=self.leaderboard_client,
-                download_id=download_request.id,
-                destination=destination,
-                pre_download_hook=self.progress_update_handler.pre_download,
-                download_iter_hook=self.progress_update_handler.on_download_chunk,
-                post_download_hook=self.progress_update_handler.post_download,
-            )
-        except ClientHttpError as e:
-            if e.status == HTTPNotFound.status_code:
-                raise FetchAttributeNotFoundException(path_to_str(path))
-            else:
-                raise
-
     def get_attributes(self, container_id: str, container_type: ContainerType) -> List[Attribute]:
         params = {
             "experimentIdentifier": container_id,
@@ -154,7 +79,7 @@ class CustomBackend(HostedNeptuneBackend):
                 attr.type for attr in accepted_attributes
             )
             if ignored_attributes:
-                _logger.warning(
+                logger.warning(
                     "Ignored following attributes (unknown type): %s.\n" "Try to upgrade `neptune`.",
                     ignored_attributes,
                 )
@@ -185,36 +110,3 @@ class CustomBackend(HostedNeptuneBackend):
             ) from e
 
         return {dto.name: get_attribute_from_dto(dto) for dto in result.attributes}
-
-    @with_api_exceptions_handler
-    def search_leaderboard_entries(
-        self,
-        project_id: UniqueId,
-        types: Optional[Iterable[ContainerType]] = None,
-        query: Optional[NQLQuery] = None,
-        columns: Optional[Iterable[str]] = None,
-    ) -> List[LeaderboardEntry]:
-        step_size = int(os.getenv(NEPTUNE_FETCH_TABLE_STEP_SIZE, "1000"))
-
-        types_filter = list(map(lambda container_type: container_type.to_api(), types)) if types else None
-        attributes_filter = {"attributeFilters": [{"path": column} for column in columns]} if columns else {}
-
-        try:
-            items = []
-            self.progress_update_handler.pre_runs_table_fetch()
-
-            for entry in iter_over_pages(
-                client=self.leaderboard_client,
-                project_id=project_id,
-                types=types_filter,
-                query=query,
-                attributes_filter=attributes_filter,
-                step_size=step_size,
-            ):
-                items.append(entry)
-                self.progress_update_handler.on_runs_table_fetch(1)
-
-            self.progress_update_handler.post_runs_table_fetch()
-            return items
-        except HTTPNotFound:
-            raise ProjectNotFound(project_id)
