@@ -153,6 +153,12 @@ class ReadOnlyProject:
                 If True: return only trashed runs.
                 If False (default): return only non-trashed runs.
                 If None: return all runs.
+            limit: How many entries to return at most. If `None`, all entries are returned.
+            sort_by: Name of the field to sort the results by.
+                The field must represent a simple type (string, float, datetime, integer, or Boolean).
+            ascending: Whether to sort the entries in ascending order of the sorting column values.
+            progress_bar: Set to `False` to disable the download progress bar,
+                or pass a `ProgressBarCallback` class to use your own progress bar callback.
 
         Returns:
             DataFrame: A pandas DataFrame containing information about the fetched runs.
