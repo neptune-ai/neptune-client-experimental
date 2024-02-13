@@ -15,6 +15,7 @@
 #
 __all__ = [
     "ReadOnlyRun",
+    "get_attribute_value_from_entry",
 ]
 
 from typing import (

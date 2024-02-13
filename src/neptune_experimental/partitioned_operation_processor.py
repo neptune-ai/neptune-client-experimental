@@ -17,19 +17,22 @@ import contextlib
 import os
 import shutil
 import threading
-from datetime import datetime
+from pathlib import Path
 from queue import Queue
 from types import TracebackType
 from typing import (
     TYPE_CHECKING,
-    Any,
     Dict,
     List,
     Optional,
+    Tuple,
     Type,
 )
 
-from neptune.constants import ASYNC_DIRECTORY
+from neptune.core.components.abstract import (
+    Resource,
+    WithResources,
+)
 from neptune.internal.backends.neptune_backend import NeptuneBackend
 from neptune.internal.container_type import ContainerType
 from neptune.internal.id_formats import UniqueId
@@ -40,7 +43,7 @@ from neptune.internal.operation_processors.operation_logger import (
     ProcessorStopSignalType,
 )
 from neptune.internal.operation_processors.operation_processor import OperationProcessor
-from neptune.internal.operation_processors.operation_storage import get_container_dir
+from neptune.internal.operation_processors.utils import get_container_dir
 from neptune.internal.utils.logger import get_logger
 
 if TYPE_CHECKING:
@@ -202,7 +205,15 @@ class ProcessorStopEventListener(contextlib.AbstractContextManager):
                 return
 
 
-class PartitionedOperationProcessor(OperationProcessor):
+class PartitionedOperationProcessor(WithResources, OperationProcessor):
+    @property
+    def resources(self) -> Tuple["Resource", ...]:
+        return tuple(self._processors)
+
+    @property
+    def data_path(self) -> Path:
+        return self._data_path
+
     def __init__(
         self,
         container_id: UniqueId,
@@ -232,10 +243,8 @@ class PartitionedOperationProcessor(OperationProcessor):
         ]
 
     @staticmethod
-    def _init_data_path(container_id: "UniqueId", container_type: "ContainerType") -> Any:
-        now = datetime.now()
-        path_suffix = f"exec-{now.timestamp()}-{now.strftime('%Y-%m-%d_%H.%M.%S.%f')}-{os.getpid()}"
-        return get_container_dir(ASYNC_DIRECTORY, container_id, container_type, path_suffix)
+    def _init_data_path(container_id: "UniqueId", container_type: "ContainerType") -> Path:
+        return Path(get_container_dir(container_id, container_type))
 
     def enqueue_operation(self, op: Operation, *, wait: bool) -> None:
         processor = self._get_operation_processor(op.path)
