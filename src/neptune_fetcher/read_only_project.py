@@ -25,7 +25,6 @@ from typing import (
     Iterable,
     List,
     Optional,
-    Union,
 )
 
 from neptune import Project
@@ -42,13 +41,9 @@ from neptune.internal.id_formats import (
 from neptune.management.internal.utils import normalize_project_name
 from neptune.metadata_containers.metadata_containers_table import Table
 from neptune.metadata_containers.utils import prepare_nql_query
+from neptune.typing import ProgressBarType
 
 from neptune_fetcher.custom_backend import CustomBackend
-from neptune_fetcher.progress_update_handler import (
-    DefaultProgressUpdateHandler,
-    NullProgressUpdateHandler,
-    ProgressUpdateHandler,
-)
 from neptune_fetcher.read_only_run import (
     ReadOnlyRun,
     get_attribute_value_from_entry,
@@ -132,27 +127,6 @@ class ReadOnlyProject:
         """
         return self.fetch_runs_df(columns=["sys/id", "sys/name"])
 
-    def progress_indicator(self, handler: Union[ProgressUpdateHandler, bool]) -> None:
-        """Sets or resets a progress indicator handler to track download progress.
-
-        The progress concerns the downloading of files/filesets, fetching series values, and fetching the runs table
-        from a Neptune project.
-
-        Args:
-            handler: Either a boolean value or a `ProgressUpdateHandler` instance.
-                If `ProgressUpdateHandler` instance - will use this instance to track progress.
-                If `True` - equivalent to using `DefaultProgressUpdateHandler`.
-                If `False` - resets progress indicator (no progress update will be performed).
-        """
-        if isinstance(handler, bool):
-            if handler:
-                self._backend.progress_update_handler = DefaultProgressUpdateHandler()
-            else:
-                # reset
-                self._backend.progress_update_handler = NullProgressUpdateHandler()
-        else:
-            self._backend.progress_update_handler = handler
-
     def fetch_runs_df(
         self,
         columns: Optional[Iterable[str]] = None,
@@ -161,6 +135,10 @@ class ReadOnlyProject:
         owners: Optional[Iterable[str]] = None,
         tags: Optional[Iterable[str]] = None,
         trashed: Optional[bool] = False,
+        limit: Optional[int] = None,
+        sort_by: str = "sys/creation_time",
+        ascending: bool = False,
+        progress_bar: Optional[ProgressBarType] = None,
     ) -> "DataFrame":
         """Fetches the runs' metadata and returns them as a pandas DataFrame.
 
@@ -202,6 +180,10 @@ class ReadOnlyProject:
             types=[ContainerType.RUN],
             query=query,
             columns=columns,
+            limit=limit,
+            sort_by=sort_by,
+            ascending=ascending,
+            progress_bar=progress_bar,
         )
 
         return Table(
