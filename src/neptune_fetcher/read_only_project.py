@@ -51,7 +51,7 @@ from neptune_fetcher.progress_update_handler import (
 )
 from neptune_fetcher.read_only_run import (
     ReadOnlyRun,
-    _get_attribute,
+    get_attribute_value_from_entry,
 )
 
 if TYPE_CHECKING:
@@ -110,8 +110,8 @@ class ReadOnlyProject:
             backend=self._backend, container_type=ContainerType.RUN, entries=leaderboard_entries
         ).to_rows():
             yield {
-                "sys/id": _get_attribute(entry=row, name="sys/id"),
-                "sys/name": _get_attribute(entry=row, name="sys/name"),
+                "sys/id": get_attribute_value_from_entry(entry=row, name="sys/id"),
+                "sys/name": get_attribute_value_from_entry(entry=row, name="sys/name"),
             }
 
     def fetch_read_only_runs(self, with_ids: List[str]) -> Generator[ReadOnlyRun, None, None]:
@@ -123,7 +123,7 @@ class ReadOnlyProject:
             with_ids: List of run ids to fetch.
         """
         for run_id in with_ids:
-            yield ReadOnlyRun(project=self, with_id=run_id)
+            yield ReadOnlyRun(read_only_project=self, with_id=run_id)
 
     def fetch_runs(self) -> "DataFrame":
         """Fetches a table containing IDs and names of runs in the project.

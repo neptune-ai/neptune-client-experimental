@@ -103,13 +103,10 @@ class Series(ABC, Generic[T]):
                 row["timestamp"] = datetime.fromtimestamp(entry.timestampMillis / 1000)
             return row
 
-        backend.progress_update_handler.pre_series_fetch(val.totalItemCount, limit)
         while offset < val.totalItemCount:
             batch = self._fetch_values_from_backend(backend, container_id, container_type, path, offset, limit)
             data.extend(batch.values)
             offset += limit
-            backend.progress_update_handler.on_series_fetch(limit)
-        backend.progress_update_handler.post_series_fetch()
 
         rows = dict((n, make_row(entry)) for (n, entry) in enumerate(data))
 
