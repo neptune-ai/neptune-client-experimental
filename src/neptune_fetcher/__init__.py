@@ -15,8 +15,6 @@
 #
 __all__ = [
     "ReadOnlyProject",
-    "ProgressUpdateHandler",
 ]
 
-from .progress_update_handler import ProgressUpdateHandler
 from .read_only_project import ReadOnlyProject
