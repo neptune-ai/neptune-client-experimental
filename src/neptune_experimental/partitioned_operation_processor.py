@@ -261,6 +261,7 @@ class PartitionedOperationProcessor(WithResources, OperationProcessor):
     def data_path(self) -> Path:
         # This is a bit of a hack as we assume that all processors use the same data path
         #   this could make problems when the first processor will be cleaned up earlier than the others
+        # mypy had a problem with the return type of the property, so I had to cast it to Path
         return Path(self._processors[0].data_path)
 
     @property
