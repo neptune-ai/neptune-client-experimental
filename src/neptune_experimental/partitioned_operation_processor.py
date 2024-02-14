@@ -15,7 +15,6 @@
 #
 import contextlib
 import os
-import shutil
 import threading
 from pathlib import Path
 from queue import Queue
@@ -25,6 +24,7 @@ from typing import (
     Dict,
     List,
     Optional,
+    Tuple,
     Type,
 )
 
@@ -32,6 +32,7 @@ from neptune.constants import (
     ASYNC_DIRECTORY,
     NEPTUNE_DATA_DIRECTORY,
 )
+from neptune.core.components.abstract import WithResources
 from neptune.internal.backends.neptune_backend import NeptuneBackend
 from neptune.internal.container_type import ContainerType
 from neptune.internal.id_formats import UniqueId
@@ -46,6 +47,8 @@ from neptune.internal.operation_processors.utils import get_container_dir
 from neptune.internal.utils.logger import get_logger
 
 if TYPE_CHECKING:
+    from neptune.core.components.abstract import Resource
+    from neptune.core.components.operation_storage import OperationStorage
     from neptune.internal.operation_processors.operation_logger import (
         ProcessorStopSignal,
         ProcessorStopSignalData,
@@ -214,7 +217,7 @@ class ProcessorStopEventListener(contextlib.AbstractContextManager):
                 return
 
 
-class PartitionedOperationProcessor(OperationProcessor):
+class PartitionedOperationProcessor(WithResources, OperationProcessor):
     def __init__(
         self,
         container_id: UniqueId,
@@ -249,8 +252,20 @@ class PartitionedOperationProcessor(OperationProcessor):
         processor.enqueue_operation(op, wait=wait)
 
     @property
+    def operation_storage(self) -> "OperationStorage":
+        # This is a bit of a hack as we assume that all processors use the same operation storage
+        #   this could make problems when the first processor will be cleaned up earlier than the others
+        return self._processors[0].operation_storage
+
+    @property
     def data_path(self) -> Path:
-        return self._data_path
+        # This is a bit of a hack as we assume that all processors use the same data path
+        #   this could make problems when the first processor will be cleaned up earlier than the others
+        return Path(self._processors[0].data_path)
+
+    @property
+    def resources(self) -> Tuple["Resource", ...]:
+        return tuple(self._processors)
 
     def _get_operation_processor(self, path: List[str]) -> OperationProcessor:
         path_hash = hash(tuple(path))
@@ -267,10 +282,6 @@ class PartitionedOperationProcessor(OperationProcessor):
     def wait(self) -> None:
         for processor in self._processors:
             processor.wait()
-
-    def flush(self) -> None:
-        for processor in self._processors:
-            processor.flush()
 
     def start(self) -> None:
         # TODO: Handle exceptions
@@ -292,10 +303,3 @@ class PartitionedOperationProcessor(OperationProcessor):
 
             for t in threads:
                 t.join()
-
-        if all(processor._queue.is_empty() for processor in self._processors):
-            shutil.rmtree(self._data_path, ignore_errors=True)
-
-    def close(self) -> None:
-        for processor in self._processors:
-            processor.close()
