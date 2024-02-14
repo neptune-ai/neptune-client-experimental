@@ -16,9 +16,7 @@ pip install --upgrade neptune neptune-experimental
 ### Importing
 
 ```python
-from neptune_fetcher import (
-    ReadOnlyProject, ProgressUpdateHandler
-)
+from neptune_fetcher import ReadOnlyProject
 ```
 
 ### Overview of Classes
@@ -32,7 +30,6 @@ from neptune_fetcher import (
         - `list_runs()`: Yields dictionaries with basic information about each run, including `sys/id` and `sys/name`.
         - `fetch_read_only_runs(with_ids: List[str])`: Returns a generator for `ReadOnlyRun` instances for specified run IDs.
         - `fetch_runs()`: Fetches runs as a DataFrame with default columns.
-        - `progress_indicator(handler: Union[ProgressUpdateHandler, bool])`: Sets a progress indicator.
         - `fetch_runs_df(columns, with_ids, states, owners, tags, trashed)`: Fetches runs as a DataFrame based on specified filters.
 
 - _`ReadOnlyProject.ReadOnlyRun`_: Represents a single Neptune run with read-only access.
@@ -41,18 +38,6 @@ from neptune_fetcher import (
         - `__delitem__(key)`: Removes a field from the local cache.
         - `field_names`: Yields the names of all available fields in the run.
         - `prefetch(paths: List[str])`: Loads values of specified fields into local cache.
-
-- `ProgressUpdateHandler`: Handles feedback presentation during data fetching.
-    - _Method Overriding_:
-        - `pre_series_fetch(total_series: int, series_limit: int)`: Sets up a progress bar for series fetching.
-        - `on_series_fetch(step: int)`: On every step in the series fetching process.
-        - `post_series_fetch()`: After series fetching is completed should clean up the resources.
-        - `pre_runs_table_fetch()`: Initializes a progress bar for table fetching.
-        - `on_runs_table_fetch(step: int)`: On every step in the table fetching process.
-        - `post_runs_table_fetch()`: After table fetching is completed should clean up the resources.
-        - `pre_download(total_size: int)`: Sets up tracking of download process.
-        - `on_download_chunk(chunk: int)`: On every step of the download process.
-        - `post_download()`: After the download process is completed should clean up the resources.
 
 
 ## Examples
@@ -112,49 +97,6 @@ print(run["metric1"].fetch(), run["metric2"].fetch())  # This will use the local
 del run["metric1"]
 ```
 
-### Custom Progress Indicator
-
-Use the default progress indicator:
-
-```python
-from neptune_fetcher import ReadOnlyProject
-
-project = ReadOnlyProject(workspace="some", project="project")
-project.progress_indicator(True)
-```
-
-or define your own progress indicator by inheriting from `ProgressUpdateHandler`:
-
-```python
-from neptune_fetcher import (
-    ProgressUpdateHandler,
-    ReadOnlyProject,
-)
-
-
-class MyProgressIndicator(ProgressUpdateHandler):
-    def pre_runs_table_fetch(self):
-        pass
-
-    def on_runs_table_fetch(self, step: int):
-        print(f"Fetching runs table, step {step}")
-
-    def post_runs_table_fetch(self):
-        pass
-
-
-project = ReadOnlyProject("some/project")
-project.progress_indicator(MyProgressIndicator())
-df = project.fetch_runs_df()
-```
-Output:
-```text
-Fetching runs table, step 100
-Fetching runs table, step 100
-Fetching runs table, step 100
-```
-
-Implementation of the default update handler can be found in `src/neptune_fetcher/progress_update_handler`.
 
 ### Example
 A full example can be found in `examples/fetch_api.py`.
