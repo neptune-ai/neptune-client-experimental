@@ -1,4 +1,4 @@
-## [UNRELEASED] neptune-experimental 0.3.3
+## neptune-experimental 0.3.3
 
 ### Changes
 - Introduce `ProccessorStopEventListener` to group log messages from `PartitionedOperationProcessor` ([#44](https://github.com/neptune-ai/neptune-client-experimental/pull/44))
