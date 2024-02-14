@@ -2,6 +2,7 @@
 
 ### Changes
 - Introduce `ProccessorStopEventListener` to group log messages from `PartitionedOperationProcessor` ([#44](https://github.com/neptune-ai/neptune-client-experimental/pull/44))
+- Adjustments after resource management ([#49](https://github.com/neptune-ai/neptune-client-experimental/pull/49))
 
 ### Fixes
 - Fix operation counting and `atexit` handling in `ProccessorStopEventListener` ([#50](https://github.com/neptune-ai/neptune-client-experimental/pull/50))

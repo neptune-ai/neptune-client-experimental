@@ -15,21 +15,24 @@
 #
 import contextlib
 import os
-import shutil
 import threading
-from datetime import datetime
+from pathlib import Path
 from queue import Queue
 from types import TracebackType
 from typing import (
     TYPE_CHECKING,
-    Any,
     Dict,
     List,
     Optional,
+    Tuple,
     Type,
 )
 
-from neptune.constants import ASYNC_DIRECTORY
+from neptune.constants import (
+    ASYNC_DIRECTORY,
+    NEPTUNE_DATA_DIRECTORY,
+)
+from neptune.core.components.abstract import WithResources
 from neptune.internal.backends.neptune_backend import NeptuneBackend
 from neptune.internal.container_type import ContainerType
 from neptune.internal.id_formats import UniqueId
@@ -40,10 +43,12 @@ from neptune.internal.operation_processors.operation_logger import (
     ProcessorStopSignalType,
 )
 from neptune.internal.operation_processors.operation_processor import OperationProcessor
-from neptune.internal.operation_processors.operation_storage import get_container_dir
+from neptune.internal.operation_processors.utils import get_container_dir
 from neptune.internal.utils.logger import get_logger
 
 if TYPE_CHECKING:
+    from neptune.core.components.abstract import Resource
+    from neptune.core.components.operation_storage import OperationStorage
     from neptune.internal.operation_processors.operation_logger import (
         ProcessorStopSignal,
         ProcessorStopSignalData,
@@ -58,6 +63,16 @@ SIGNALS_TO_ACCUMULATE = (
     ProcessorStopSignalType.WAITING_FOR_OPERATIONS,
     ProcessorStopSignalType.STILL_WAITING,
 )
+
+
+def get_container_partition_path(type_dir: str, execution_dir_name: str, partition: int) -> Path:
+    neptune_data_dir = Path(os.getenv("NEPTUNE_DATA_DIRECTORY", NEPTUNE_DATA_DIRECTORY))
+    return neptune_data_dir / type_dir / (execution_dir_name + "__partition_" + str(partition))
+
+
+def get_container_path(type_dir: str, execution_dir_name: str) -> Path:
+    neptune_data_dir = Path(os.getenv("NEPTUNE_DATA_DIRECTORY", NEPTUNE_DATA_DIRECTORY))
+    return neptune_data_dir / type_dir / execution_dir_name
 
 
 class ProcessorStopSignalHandler:
@@ -202,7 +217,7 @@ class ProcessorStopEventListener(contextlib.AbstractContextManager):
                 return
 
 
-class PartitionedOperationProcessor(OperationProcessor):
+class PartitionedOperationProcessor(WithResources, OperationProcessor):
     def __init__(
         self,
         container_id: UniqueId,
@@ -214,7 +229,8 @@ class PartitionedOperationProcessor(OperationProcessor):
         sleep_time: float = 5,
         partitions: int = 5,
     ):
-        self._data_path = self._init_data_path(container_id, container_type)
+        self._execution_dir_name = get_container_dir(container_id, container_type)
+        self._data_path = get_container_path(ASYNC_DIRECTORY, get_container_dir(container_id, container_type))
         self._partitions = partitions
         self._processors = [
             AsyncOperationProcessor(
@@ -225,21 +241,32 @@ class PartitionedOperationProcessor(OperationProcessor):
                 queue=queue,
                 sleep_time=sleep_time,
                 batch_size=batch_size,
-                data_path=self._data_path / f"partition-{partition_id}",
+                data_path=get_container_partition_path(ASYNC_DIRECTORY, self._execution_dir_name, partition_id),
                 should_print_logs=False,
             )
             for partition_id in range(partitions)
         ]
 
-    @staticmethod
-    def _init_data_path(container_id: "UniqueId", container_type: "ContainerType") -> Any:
-        now = datetime.now()
-        path_suffix = f"exec-{now.timestamp()}-{now.strftime('%Y-%m-%d_%H.%M.%S.%f')}-{os.getpid()}"
-        return get_container_dir(ASYNC_DIRECTORY, container_id, container_type, path_suffix)
-
     def enqueue_operation(self, op: Operation, *, wait: bool) -> None:
         processor = self._get_operation_processor(op.path)
         processor.enqueue_operation(op, wait=wait)
+
+    @property
+    def operation_storage(self) -> "OperationStorage":
+        # This is a bit of a hack as we assume that all processors use the same operation storage
+        #   this could make problems when the first processor will be cleaned up earlier than the others
+        return self._processors[0].operation_storage
+
+    @property
+    def data_path(self) -> Path:
+        # This is a bit of a hack as we assume that all processors use the same data path
+        #   this could make problems when the first processor will be cleaned up earlier than the others
+        # mypy had a problem with the return type of the property, so I had to cast it to Path
+        return Path(self._processors[0].data_path)
+
+    @property
+    def resources(self) -> Tuple["Resource", ...]:
+        return tuple(self._processors)
 
     def _get_operation_processor(self, path: List[str]) -> OperationProcessor:
         path_hash = hash(tuple(path))
@@ -256,10 +283,6 @@ class PartitionedOperationProcessor(OperationProcessor):
     def wait(self) -> None:
         for processor in self._processors:
             processor.wait()
-
-    def flush(self) -> None:
-        for processor in self._processors:
-            processor.flush()
 
     def start(self) -> None:
         # TODO: Handle exceptions
@@ -281,13 +304,3 @@ class PartitionedOperationProcessor(OperationProcessor):
 
             for t in threads:
                 t.join()
-
-        if all(processor._queue.is_empty() for processor in self._processors):
-            shutil.rmtree(self._data_path, ignore_errors=True)
-
-        if not os.listdir(self._data_path.parent):
-            shutil.rmtree(self._data_path.parent, ignore_errors=True)
-
-    def close(self) -> None:
-        for processor in self._processors:
-            processor.close()
