@@ -12,7 +12,7 @@ pattern = "default-unprefixed"
 python = "^3.7"
 
 # Base neptune package
-neptune = { git = "git+https://github.com/neptune-ai/neptune-client.git", branch = "master" }
+neptune = { git = "https://github.com/neptune-ai/neptune-client.git", branch = "master" }
 
 # For 3.7 compatibility
 typing_extensions = "^4.0.0"
