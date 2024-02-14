@@ -44,6 +44,7 @@ from neptune.internal.backends.api_model import (
 )
 from neptune.internal.container_type import ContainerType
 from neptune.internal.utils import verify_type
+from neptune.typing import ProgressBarType
 
 from neptune_fetcher.attributes import (
     Attr,
@@ -170,14 +171,16 @@ class Downloadable(Fetchable, ABC):
         raise NeptuneUnsupportedType("Files and FileSets do not support `fetch` operation")
 
     @abstractmethod
-    def download(self, destination: Optional[str] = None) -> None:
+    def download(self, destination: Optional[str] = None, progress_bar: Optional[ProgressBarType] = None) -> None:
         ...
 
 
 class DownloadableFile(Downloadable):
-    def download(self, destination: Optional[str] = None) -> None:
+    def download(self, destination: Optional[str] = None, progress_bar: Optional[ProgressBarType] = None) -> None:
         verify_type("destination", destination, (str, type(None)))
-        self._backend.download_file(self._container_id, ContainerType.RUN, [self._attribute.path], destination)
+        self._backend.download_file(
+            self._container_id, ContainerType.RUN, [self._attribute.path], destination, progress_bar
+        )
 
     def fetch_extension(self) -> str:
         val = self._backend.get_file_attribute(self._container_id, ContainerType.RUN, [self._attribute.path])
@@ -185,9 +188,11 @@ class DownloadableFile(Downloadable):
 
 
 class DownloadableSet(Downloadable):
-    def download(self, destination: Optional[str] = None) -> None:
+    def download(self, destination: Optional[str] = None, progress_bar: Optional[ProgressBarType] = None) -> None:
         verify_type("destination", destination, (str, type(None)))
-        self._backend.download_file_set(self._container_id, ContainerType.RUN, [self._attribute.path], destination)
+        self._backend.download_file_set(
+            self._container_id, ContainerType.RUN, [self._attribute.path], destination, progress_bar
+        )
 
 
 def which_fetchable(attribute: Attribute, *args: Any, **kwargs: Any) -> Fetchable:

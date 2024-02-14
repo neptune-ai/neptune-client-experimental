@@ -15,6 +15,7 @@
 #
 __all__ = [
     "ReadOnlyRun",
+    "get_attribute_value_from_entry",
 ]
 
 from typing import (
@@ -41,7 +42,7 @@ if TYPE_CHECKING:
     from neptune_fetcher.read_only_project import ReadOnlyProject
 
 
-def _get_attribute(entry: TableEntry, name: str) -> Optional[str]:
+def get_attribute_value_from_entry(entry: TableEntry, name: str) -> Optional[str]:
     try:
         return entry.get_attribute_value(name)
     except ValueError:

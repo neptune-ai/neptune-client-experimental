@@ -25,7 +25,6 @@ from typing import (
     Iterable,
     List,
     Optional,
-    Union,
 )
 
 from neptune import Project
@@ -42,16 +41,12 @@ from neptune.internal.id_formats import (
 from neptune.management.internal.utils import normalize_project_name
 from neptune.metadata_containers.metadata_containers_table import Table
 from neptune.metadata_containers.utils import prepare_nql_query
+from neptune.typing import ProgressBarType
 
 from neptune_fetcher.custom_backend import CustomBackend
-from neptune_fetcher.progress_update_handler import (
-    DefaultProgressUpdateHandler,
-    NullProgressUpdateHandler,
-    ProgressUpdateHandler,
-)
 from neptune_fetcher.read_only_run import (
     ReadOnlyRun,
-    _get_attribute,
+    get_attribute_value_from_entry,
 )
 
 if TYPE_CHECKING:
@@ -110,8 +105,8 @@ class ReadOnlyProject:
             backend=self._backend, container_type=ContainerType.RUN, entries=leaderboard_entries
         ).to_rows():
             yield {
-                "sys/id": _get_attribute(entry=row, name="sys/id"),
-                "sys/name": _get_attribute(entry=row, name="sys/name"),
+                "sys/id": get_attribute_value_from_entry(entry=row, name="sys/id"),
+                "sys/name": get_attribute_value_from_entry(entry=row, name="sys/name"),
             }
 
     def fetch_read_only_runs(self, with_ids: List[str]) -> Generator[ReadOnlyRun, None, None]:
@@ -123,7 +118,7 @@ class ReadOnlyProject:
             with_ids: List of run ids to fetch.
         """
         for run_id in with_ids:
-            yield ReadOnlyRun(project=self, with_id=run_id)
+            yield ReadOnlyRun(read_only_project=self, with_id=run_id)
 
     def fetch_runs(self) -> "DataFrame":
         """Fetches a table containing IDs and names of runs in the project.
@@ -131,27 +126,6 @@ class ReadOnlyProject:
         Returns `pandas.DataFrame` with two columns ('sys/id' and 'sys/name') and rows corresponding to project runs.
         """
         return self.fetch_runs_df(columns=["sys/id", "sys/name"])
-
-    def progress_indicator(self, handler: Union[ProgressUpdateHandler, bool]) -> None:
-        """Sets or resets a progress indicator handler to track download progress.
-
-        The progress concerns the downloading of files/filesets, fetching series values, and fetching the runs table
-        from a Neptune project.
-
-        Args:
-            handler: Either a boolean value or a `ProgressUpdateHandler` instance.
-                If `ProgressUpdateHandler` instance - will use this instance to track progress.
-                If `True` - equivalent to using `DefaultProgressUpdateHandler`.
-                If `False` - resets progress indicator (no progress update will be performed).
-        """
-        if isinstance(handler, bool):
-            if handler:
-                self._backend.progress_update_handler = DefaultProgressUpdateHandler()
-            else:
-                # reset
-                self._backend.progress_update_handler = NullProgressUpdateHandler()
-        else:
-            self._backend.progress_update_handler = handler
 
     def fetch_runs_df(
         self,
@@ -161,6 +135,10 @@ class ReadOnlyProject:
         owners: Optional[Iterable[str]] = None,
         tags: Optional[Iterable[str]] = None,
         trashed: Optional[bool] = False,
+        limit: Optional[int] = None,
+        sort_by: str = "sys/creation_time",
+        ascending: bool = False,
+        progress_bar: Optional[ProgressBarType] = None,
     ) -> "DataFrame":
         """Fetches the runs' metadata and returns them as a pandas DataFrame.
 
@@ -175,6 +153,12 @@ class ReadOnlyProject:
                 If True: return only trashed runs.
                 If False (default): return only non-trashed runs.
                 If None: return all runs.
+            limit: How many entries to return at most. If `None`, all entries are returned.
+            sort_by: Name of the field to sort the results by.
+                The field must represent a simple type (string, float, datetime, integer, or Boolean).
+            ascending: Whether to sort the entries in ascending order of the sorting column values.
+            progress_bar: Set to `False` to disable the download progress bar,
+                or pass a `ProgressBarCallback` class to use your own progress bar callback.
 
         Returns:
             DataFrame: A pandas DataFrame containing information about the fetched runs.
@@ -202,6 +186,10 @@ class ReadOnlyProject:
             types=[ContainerType.RUN],
             query=query,
             columns=columns,
+            limit=limit,
+            sort_by=sort_by,
+            ascending=ascending,
+            progress_bar=progress_bar,
         )
 
         return Table(

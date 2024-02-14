@@ -41,9 +41,6 @@ def main():
     print("Run created. Now let's use the new fetcher API")
     project = ReadOnlyProject(project=PROJECT)
 
-    # Track progress update
-    project.progress_indicator(True)
-
     run_info = list(project.list_runs())
     print("Run info list:\n", run_info[:10], "\n###########################################\n")
 
