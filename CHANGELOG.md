@@ -1,3 +1,9 @@
+## neptune-experimental 0.3.4
+
+### Changes
+- Support for `neptune` 1.9.1 ([#?](https://github.com/neptune-ai/neptune-client-experimental/pull/?))
+
+
 ## neptune-experimental 0.3.3
 
 ### Changes
