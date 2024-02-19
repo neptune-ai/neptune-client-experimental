@@ -541,13 +541,13 @@ files = [
 
 [[package]]
 name = "neptune"
-version = "1.8.6"
+version = "1.9.1"
 description = "Neptune Client"
 optional = false
 python-versions = ">=3.7,<4.0"
 files = [
-    {file = "neptune-1.8.6-py3-none-any.whl", hash = "sha256:a6b310b4c260e052b71768ca6eba229985c4829c888134e45b40594ee899ead9"},
-    {file = "neptune-1.8.6.tar.gz", hash = "sha256:e145488044bac5ad975f74cd33889beee4ab303c026f1c0c3e70959fd437f67f"},
+    {file = "neptune-1.9.1-py3-none-any.whl", hash = "sha256:e2e6dab32d30b3f6788c459f4a98f1a74c8927451653625c682f87fbd412494a"},
+    {file = "neptune-1.9.1.tar.gz", hash = "sha256:31684dcd0132b084671151e79e5b91277dfbd08b87ea3d1da8ca4e058852b139"},
 ]
 
 [package.dependencies]
@@ -567,6 +567,7 @@ requests = ">=2.20.0"
 requests-oauthlib = ">=1.0.0"
 six = ">=1.12.0"
 swagger-spec-validator = ">=2.7.4"
+typing-extensions = ">=3.10.0"
 urllib3 = "*"
 websocket-client = ">=0.35.0,<1.0.0 || >1.0.0"
 
@@ -574,8 +575,6 @@ websocket-client = ">=0.35.0,<1.0.0 || >1.0.0"
 airflow = ["neptune-airflow"]
 aws = ["neptune-aws"]
 detectron2 = ["neptune-detectron2"]
-dev = ["Faker", "altair", "bokeh", "freezegun", "matplotlib", "mock", "moto[s3]", "munch", "mypy", "plotly", "pre-commit", "pytest", "pytest-cov", "pytest-mock", "pytest-timeout", "pytest-xdist", "tensorflow", "torch", "vega_datasets"]
-e2e = ["accelerate", "backoff", "optuna", "pytorch-lightning", "scikit-learn", "torchvision", "transformers", "zenml"]
 fastai = ["neptune-fastai"]
 kedro = ["kedro-neptune"]
 lightgbm = ["neptune-lightgbm"]
@@ -1309,4 +1308,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "a6ceb59d2be4925fed82bba07ee253047dee8553c36363e54725486596dcb4d6"
+content-hash = "97e56317f9d62d374d35949fea9d5c42aa0e4ac4b0d0a18e034b1bef6310f90e"
