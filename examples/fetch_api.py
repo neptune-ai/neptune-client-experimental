@@ -24,8 +24,6 @@ PROJECT = "<PROJECT HERE>"
 
 def create_neptune_run() -> str:
     with Run(project=PROJECT) as run:
-        run["files/my_file"].upload("my_file.json")
-
         for i in range(10_000):
             run["series/my_float_series"].log(i**2)
             run["series/my_string_series"].log(f"string no. {i}")
@@ -76,11 +74,6 @@ def main():
         with_ids=[run["sys/id"] for run in run_info[:10]],
     )
     print("Runs dataframe:\n", run_df, "\n###########################################\n")
-
-    # Download file
-    print("Downloading file")
-    run["files/my_file"].download()
-    print("File downloaded")
 
     # Run fields
     fields = list(run.field_names)
