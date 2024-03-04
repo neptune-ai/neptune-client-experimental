@@ -15,10 +15,7 @@ for i in range(3):
     client.log_metrics(
         run1_id,
         i,
-        {
-            "series/float": 2.0**i,
-            # "TODO: series/string": ascii_letters[i]
-        },
+        {"series/float": 2.0**i},
         run1_id,
     )
 

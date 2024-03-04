@@ -39,11 +39,6 @@ def step_impl(context):
     context.series = "series/float"
 
 
-@given("we have a string series")
-def step_impl(context):
-    context.series = "series/string"
-
-
 @when("we fetch the field value")
 def step_impl(context):
     context.value = context.run[context.field].fetch()
@@ -61,7 +56,6 @@ def step_impl(context):
         "fields/int",
         "fields/string",
         "series/float",
-        # TODO: series/string',
         "sys/creation_time",
         "sys/id",
         "sys/modification_time",
@@ -98,11 +92,6 @@ def step_impl(context):
     assert context.value == 5
 
 
-@then("the value is `c`")
-def step_impl(context):
-    assert context.value == "c"
-
-
 @then("the value is `Neptune Rulez!`")
 def step_impl(context):
     assert context.value == "Neptune Rulez!"
@@ -111,8 +100,3 @@ def step_impl(context):
 @then("the values are [1, 2, 4]")
 def step_impl(context):
     assert context.values == [1, 2, 4]
-
-
-@then("the values are [`a`, `b`, `c`]")
-def step_impl(context):
-    assert context.values == ["a", "b", "c"]
