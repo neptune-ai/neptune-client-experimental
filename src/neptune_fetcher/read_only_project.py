@@ -29,7 +29,11 @@ from typing import (
 
 from neptune import Project
 from neptune.envs import PROJECT_ENV_NAME
-from neptune.internal.backends.nql import NQLEmptyQuery
+from neptune.internal.backends.nql import (
+    NQLAttributeOperator,
+    NQLAttributeType,
+    NQLQueryAttribute,
+)
 from neptune.internal.backends.project_name_lookup import project_name_lookup
 from neptune.internal.container_type import ContainerType
 from neptune.internal.credentials import Credentials
@@ -97,7 +101,9 @@ class ReadOnlyProject:
         leaderboard_entries = self._backend.search_leaderboard_entries(
             project_id=self._project_id,
             types=[ContainerType.RUN],
-            query=NQLEmptyQuery(),
+            query=NQLQueryAttribute(
+                name="sys/trashed", type=NQLAttributeType.BOOLEAN, operator=NQLAttributeOperator.EQUALS, value=False
+            ),
             columns=["sys/id", "sys/name"],
         )
 
