@@ -3,6 +3,7 @@ Faker
 altair
 backoff
 bokeh
+behave
 freezegun
 matplotlib
 mock
@@ -16,14 +17,3 @@ pytest-mock
 pytest-timeout
 pytest-xdist
 seaborn
-
-# Get rid of these
-tensorflow
-torch
-vega_datasets
-optuna
-scikit-learn
-torchvision
-accelerate
-transformers
-pytorch-lightning
