@@ -150,7 +150,7 @@ class ReadOnlyProject:
 
         Args:
             columns: A list of column names to include in the DataFrame.
-                Defaults to None, which includes all available columns.
+                Defaults to None, which includes all available columns up to 10k.
             with_ids: A list of run IDs to filter the results.
             states: A list of run states to filter the results.
             owners: A list of owner names to filter the results.
