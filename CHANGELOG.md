@@ -1,3 +1,9 @@
+## [UNRELEASED] neptune-experimental 0.3.5
+
+### Changes
+- Do not include trashed runs at default ([#61](https://github.com/neptune-ai/neptune-client-experimental/pull/61))
+
+
 ## neptune-experimental 0.3.4
 
 ### Changes
