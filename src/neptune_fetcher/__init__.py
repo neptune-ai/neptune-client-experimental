@@ -13,8 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-__all__ = [
-    "ReadOnlyProject",
-]
 
-from .read_only_project import ReadOnlyProject
+raise ImportError("""
+
+The `neptune-experimental` package is deprecated and should not be used.
+
+To use the Neptune fetching API, uninstall `neptune-experimental` and install `neptune-fetcher`:
+
+    pip uninstall -y neptune-experimental; pip install neptune-fetcher
+
+If you're using `uv`:
+
+    uv pip uninstall neptune-experimental; uv pip install neptune-fetcher --prerelease=allow
+
+""")
